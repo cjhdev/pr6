@@ -1,0 +1,72 @@
+    @startuml
+
+    Peer "1" *-- "0..n" Association
+    Peer "0..n" o-- "0..n" Object
+
+    Association "1" o-- "0..1" "Security Module"
+    Association "1" *-- "0..n" Client
+    Association "1" *-- "0..n" Server
+    
+    Method "0..255" --* "1" Object
+
+    Class ..|> Object
+    
+
+    class Peer {
+
+        Entity Identifier
+    }
+
+    class Association {
+
+        Local Identifier
+        Remote Identifier
+        Assigned Role
+        Remote Receive Size
+    }
+
+    class "Security Module" {
+
+        Local Identifier
+        Remote Identifier
+        Invocation Counter
+        Remote Invocation Counter Set
+        Secret
+
+        encrypt()
+        decrypt()
+        outputCounter()
+        inputCounter()        
+    }
+    
+    class Client {
+
+    }
+    class Server {
+
+    }
+
+    class Object {
+
+        Object Identifier: INTEGER [0..65535]
+        Object Name
+    }
+
+    class Method {
+
+        Method Index: INTEGER [0..255]
+        Method Name
+        Authorised Role
+        
+        invoke(Argument) : ReturnValue
+    }
+
+    class Class {
+
+        Class Identifier: INTEGER [0..65535]
+        Class Name        
+        Class Version: INTEGER [0..255]
+        Method Definition
+    }
+
+    @enduml

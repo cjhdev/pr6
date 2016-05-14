@@ -1,0 +1,73 @@
+PR6
+DEFINITIONS
+::=
+BEGIN
+
+    GCM ::= SEQUENCE
+    {
+        dest    OCTET STRING (SIZE(8)),
+        source  OCTET STRING (SIZE(8)),
+        counter OCTET STRING (SIZE(4)),
+        ct      OCTET STRING (SIZE(0..65535)),  -- contains METHOD
+        mac     OCTET STRING (SIZE(16)) 
+    }
+
+    METHOD ::= CHOICE
+    {
+        method-req         [0]     METHOD-REQ,
+        method-nc-req      [1]     METHOD-REQ,
+        method-nc-boe-req  [2]     METHOD-REQ,
+        method-boe-req     [3]     METHOD-REQ,
+        method-res         [4]     METHOD-RES
+    }
+
+    METHOD-REQ ::= SEQUENCE
+    {
+        method-list SEQUENCE OF Method-Invocation-Request
+    }
+        
+    METHOD-RES ::= SEQUENCE
+    {
+        counter OCTET STRING (SIZE(2)), -- least significant bytes of GCM.counter
+        result-list SEQUENCE OF Method-Invocation-Result
+    }
+    
+    Method-Invocation-Request :: SEQUENCE
+    {
+        method-id   Method-ID,
+        argument    Argument
+    }
+
+    Method-Invocation-Result ::= CHOICE
+    {
+        success SEQUENCE
+        {
+            result      Result ( success ),
+            returnValue Argument
+        },
+        failure Result ( ALL EXCEPT success )
+    }
+
+    -- the result of a method invocation on the server
+    Result ::= ENUMERATED
+    {
+        success,            -- successful invocation
+        object-undefined,   -- object does not exist
+        method-undefined,   -- method does not exist
+        access-denied,      -- client not allowed to invoke method
+        argument,           -- argument is invalid for method
+        permanent,          -- method invocation failed for permanent reason
+        temporary           -- method invocation failed for temporary reason
+    }
+
+    -- identifies a method by object and method index
+    Method-ID ::= SEQUENCE 
+    {
+        object-id       INTEGER (0..65535),
+        method-index    INTEGER (0..255)
+    }
+
+    -- opaque data block representing an argument or return value
+    Argument ::= OCTET STRING (SIZE(0..65535))
+    
+END
