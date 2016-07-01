@@ -1,0 +1,39 @@
+module Wrangle
+
+    OBJECT_ID_MAX = 0xFFFF
+    CLASS_ID_MAX = 0xFFFF
+    CLASS_VERSION_MAX = 0xFF
+    METHOD_INDEX_MAX = 0xFF
+    
+    # aligns with enum pr6_result
+    PR6_RESULT = [
+        :PR6_RESULT_SUCCESS,
+        :PR6_RESULT_OBJECT_UNDEFINED,
+        :PR6_RESULT_METHOD_UNDEFINED,
+        :PR6_RESULT_ACCESS_DENIED,
+        :PR6_RESULT_ARGUMENT,
+        :PR6_RESULT_PERMANENT,
+        :PR6_RESULT_TEMPORARY
+    ]
+
+    # aligns with enum pr6_client_result
+    PR6_CLIENT_RESULT = [
+        :PR6_CLIENT_RESULT_SUCCESS,
+        :PR6_CLIENT_RESULT_OBJECT_UNDEFINED,
+        :PR6_CLIENT_RESULT_METHOD_UNDEFINED,
+        :PR6_CLIENT_RESULT_ACCESS_DENIED,
+        :PR6_CLIENT_RESULT_ARGUMENT,
+        :PR6_CLIENT_RESULT_PERMANENT,
+        :PR6_CLIENT_RESULT_TEMPORARY,
+        :PR6_CLIENT_RESULT_MISSING,
+        :PR6_CLIENT_RESULT_TIMEOUT
+    ]
+
+    # aligns with enum pr6_adapter_result
+    PR6_ADAPTER_RESULT = [
+        :PR6_ADAPTER_SUCCESS,
+        :PR6_ADAPTER_BUFFER,
+        :PR6_ADAPTER_YIELD
+    ]
+
+end
