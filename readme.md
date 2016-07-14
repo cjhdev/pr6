@@ -1,6 +1,8 @@
 PR6
 ===
 
+[![Build Status](https://travis-ci.org/cjhdev/pr6.svg?branch=master)](https://travis-ci.org/cjhdev/pr6)
+
 Protocol 6 is a machine-to-machine specification useful for building
 connected applications between resource constrained devices.
 
