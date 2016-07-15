@@ -31,8 +31,6 @@ TARGET_OBJ := debug_message.o
 VPATH += target/host
 
 all: run
-#	echo $(TEST_RUNNERS)
-#	echo $(VPATH)
 
 runners: $(addprefix $(DIR_RUNNERS)/, $(TEST_RUNNERS:=.c))
 

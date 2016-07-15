@@ -57,20 +57,13 @@ static struct pr6_client client;
 void setUp(void)
 {
     cbResultTouch = 0;
+
+    static struct pr6_client_req_res pool[4U];
+    static uint16_t poolMax = sizeof(pool) / sizeof(*pool);
+    bool confirmed = true;
+    bool breakOnError = false;
     
-    static struct pr6_client_req_res reqResPool[4U];
-    static struct pr6_client_init in = {
-
-        .reqResPool = reqResPool,
-        .reqResPoolMax = sizeof(reqResPool) / sizeof(*reqResPool),
-
-        .confirmed = true,
-        .breakOnError = false,
-
-        .cbResult = cbResult,
-    };
-
-    PR6_ClientInit(&client, &in, 42, 1, (const uint8_t *)"hello", strlen("hello"));
+    PR6_ClientInit(&client, pool, poolMax, confirmed, breakOnError, cbResult, 42, 1, (const uint8_t *)"hello", strlen("hello"));
 }
 
 void tearDown(void)

@@ -116,25 +116,17 @@ struct pr6_client_req_res {
     uint16_t returnValueLen;    /**< length of returnValue in bytes */
 };
 
-/** Initialise a client instance with a Request */
-struct pr6_client_init {
-
-    struct pr6_client_req_res *reqResPool;   /**< list element pool */
-    uint16_t reqResPoolMax;                   /**< max elements in `reqResPool` */
-
-    bool confirmed;     /**< If true Server shall confirm the Request */
-    bool breakOnError;  /**< If true Server shall halt invocation of Request on first error */
-
-    pr6_client_result_fn_t cbResult;       /**< response complete callback */
-};
-
 /* functions **********************************************************/
 
 /**
  * Initialise a client instance with a request
  *
  * @param[in] r client instance
- * @param[in] param init parameters
+ * @param[in] pool pool req_res elements (1 per request you wish to send)
+ * @param[in] poolMax number of elements in `pool`
+ * @param[in] confirmed if true Server shall confirm the request
+ * @param[in] breakOnError if true Server shall halt invocation of request on first error
+ * @param[in] result response complete callback function
  * @param[in] objectID objectID to reference object
  * @param[in] methodIndex method belonging to object
  * @param[in] arg method invocation argument
@@ -146,7 +138,7 @@ struct pr6_client_init {
  * @retval NULL client instance could not be initialised
  *
  * */
-struct pr6_client *PR6_ClientInit(struct pr6_client *r, const struct pr6_client_init *param, uint16_t objectID, uint8_t methodIndex, const uint8_t *arg, uint16_t argLen);
+struct pr6_client *PR6_ClientInit(struct pr6_client *r, struct pr6_client_req_res *pool, uint16_t poolMax, bool confirmed, bool breakOnError, pr6_client_result_fn_t result, uint16_t objectID, uint8_t methodIndex, const uint8_t *arg, uint16_t argLen);
 
 /**
  * Add another method invocation to an initialised but inactive client instance
@@ -164,6 +156,24 @@ struct pr6_client *PR6_ClientInit(struct pr6_client *r, const struct pr6_client_
  *
  * */
 struct pr6_client *PR6_ClientInit_AddMethod(struct pr6_client *r, uint16_t objectID, uint8_t methodIndex, const uint8_t *arg, uint16_t argLen);
+
+/**
+ * Initialise a client instance from a request message
+ *
+ * This is useful if your application stores the messages produced by PR6_ClientOutput but not the client instance itself.
+ *
+ * @param[in] r client instance
+ * @param[in] param init parameters
+ * @param[in] in request message to work backwards from
+ * @param[in] inLen byte length of `in`
+ *
+ * @return #pr5_client pointer to client instance
+ *
+ * @retval !(NULL) client instance initialised
+ * @retval NULL client instance could not be initialised
+ *
+ * */
+struct pr6_client *PR6_ClientInit_FromMessage(struct pr6_client *r, struct pr6_client_req_res *pool, uint16_t poolMax, pr6_client_result_fn_t result, const uint8_t *in, uint16_t inLen);
 
 /**
  * Deliver a message to a client instance
@@ -256,6 +266,18 @@ void PR6_ClientTimeout(struct pr6_client *r);
  *
  * */
 uint16_t PR6_ClientPeekCounter(const uint8_t *in, uint16_t inLen, uint16_t *counter);
+
+
+/**
+ * Inspect the req/res structure
+ *
+ * @param[in] r client instance
+ * @param[out] list pointer to list
+ *
+ * @return number of structures in `list`
+ *
+ * */
+uint16_t PR6_ClientList(const struct pr6_client *r, const struct pr6_client_req_res **list);
 
 #ifdef DOXYGEN
 /** An <b>example</b> callback function passed to PR6_ClientInit

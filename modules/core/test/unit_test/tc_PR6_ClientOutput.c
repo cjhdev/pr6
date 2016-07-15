@@ -41,19 +41,12 @@ void setUp(void)
 {
     cbResultTouch = 0;
     
-    static struct pr6_client_req_res reqResPool[4U];
-    static struct pr6_client_init in = {
+    static struct pr6_client_req_res pool[4U];
+    static uint16_t poolMax = sizeof(pool) / sizeof(*pool);
+    bool confirmed = true;
+    bool breakOnError = false;
 
-        .reqResPool = reqResPool,
-        .reqResPoolMax = sizeof(reqResPool) / sizeof(*reqResPool),
-
-        .confirmed = true,
-        .breakOnError = false,
-
-        .cbResult = cbResult,
-    };
-
-    PR6_ClientInit(&client, &in, 42, 1, (const uint8_t *)"hello", strlen("hello"));
+    PR6_ClientInit(&client, pool, poolMax, confirmed, breakOnError, cbResult, 42, 1, (const uint8_t *)"hello", strlen("hello"));
 }
 
 void tearDown(void)
@@ -150,19 +143,12 @@ void test_PR6_ClientOutput_retry(void)
 
 void test_PR6_ClientOutput_nonConfirmed(void)
 {
-    static struct pr6_client_req_res reqResPool[2U];
-    static struct pr6_client_init in = {
-
-        .reqResPool = reqResPool,
-        .reqResPoolMax = sizeof(reqResPool) / sizeof(*reqResPool),
-
-        .confirmed = false,
-        .breakOnError = false,
-
-        .cbResult = cbResult
-    };
-
-    TEST_ASSERT_EQUAL(&client, PR6_ClientInit(&client, &in, 42, 1, (const uint8_t *)"hello", strlen("hello")));    
+    static struct pr6_client_req_res pool[4U];
+    static uint16_t poolMax = sizeof(pool) / sizeof(*pool);
+    bool confirmed = false;
+    bool breakOnError = false;
+    
+    TEST_ASSERT_EQUAL(&client, PR6_ClientInit(&client, pool, poolMax, confirmed, breakOnError, cbResult, 42, 1, (const uint8_t *)"hello", strlen("hello")));    
     TEST_ASSERT_EQUAL(&client, PR6_ClientInit_AddMethod(&client, 42, 1, (const uint8_t *)"hello", strlen("hello")));    
     TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));
 

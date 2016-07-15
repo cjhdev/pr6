@@ -45,19 +45,12 @@ void setUp(void)
     const uint8_t expOutput[] = {PR6_METHOD_REQ, 0x00, 42, 1, 5, 'h', 'e', 'l', 'l', 'o'};        
     uint8_t out[sizeof(expOutput)];
     
-    static struct pr6_client_req_res reqResPool[1U];    
-    struct pr6_client_init in = {
-
-        .reqResPool = reqResPool,
-        .reqResPoolMax = sizeof(reqResPool) / sizeof(*reqResPool),
-
-        .confirmed = true,
-        .breakOnError = false,
-
-        .cbResult = cbResult,
-    };
-
-    PR6_ClientInit(&client, &in, 42, 1, (const uint8_t *)"hello", strlen("hello"));
+    static struct pr6_client_req_res pool[1U];
+    static uint16_t poolMax = sizeof(pool) / sizeof(*pool);
+    bool confirmed = true;
+    bool breakOnError = false;
+    
+    PR6_ClientInit(&client, pool, poolMax, confirmed, breakOnError, cbResult, 42, 1, (const uint8_t *)"hello", strlen("hello"));
     PR6_ClientOutput(&client, out, sizeof(out));
 }
 

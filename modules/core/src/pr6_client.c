@@ -36,6 +36,7 @@
 static uint8_t putObjectID(uint16_t in, uint8_t *out);
 static uint8_t castResult(uint8_t in, enum pr6_client_result *out);
 static uint16_t getCounter(const uint8_t *in);
+static uint16_t getObjectID(const uint8_t *in);
 
 
 /* structure **********************************************************/
@@ -54,30 +55,29 @@ struct pr6_res_complete {
 
 /* functions **********************************************************/
 
-struct pr6_client *PR6_ClientInit(struct pr6_client *r, const struct pr6_client_init *param, uint16_t objectID, uint8_t methodIndex, const uint8_t *arg, uint16_t argLen)
+struct pr6_client *PR6_ClientInit(struct pr6_client *r, struct pr6_client_req_res *pool, uint16_t poolMax, bool confirmed, bool breakOnError, pr6_client_result_fn_t result, uint16_t objectID, uint8_t methodIndex, const uint8_t *arg, uint16_t argLen)
 {
     ASSERT((r != NULL))
-    ASSERT((param != NULL))
-    ASSERT((param->reqResPool != NULL))
-    ASSERT((param->cbResult != NULL))
+    ASSERT((pool != NULL))
+    ASSERT((result != NULL))    
 
     struct pr6_client *retval = NULL;
 
     memset(r, 0, sizeof(struct pr6_client));
 
-    if(param->reqResPoolMax > 0U){
+    if(poolMax > 0U){
 
-        memset(param->reqResPool, 0, sizeof(*param->reqResPool) * param->reqResPoolMax);
+        memset(pool, 0, poolMax * sizeof(struct pr6_client_req_res));
 
-        r->list = param->reqResPool;    
-        r->listMax = param->reqResPoolMax;
+        r->list = pool;    
+        r->listMax = poolMax;
 
-        r->confirmed = param->confirmed;
-        r->breakOnError = param->breakOnError;
+        r->confirmed = confirmed;
+        r->breakOnError = breakOnError;
 
         r->state = PR6_CLIENT_STATE_INIT;
         
-        r->cbResult = param->cbResult;
+        r->cbResult = result;
 
 #ifndef NDEBUG
         r->magic = CLIENT_STATE_MAGIC;
@@ -96,13 +96,155 @@ struct pr6_client *PR6_ClientInit(struct pr6_client *r, const struct pr6_client_
     }
     else{
 
-        DEBUG("param->reqResPoolMax must be at least 1")
+        DEBUG("poolMax must be at least 1")
     }
     
 
     return retval;
 }
 
+struct pr6_client *PR6_ClientInit_FromMessage(struct pr6_client *r, struct pr6_client_req_res *pool, uint16_t poolMax, pr6_client_result_fn_t result, const uint8_t *in, uint16_t inLen)
+{
+    ASSERT((r != NULL))
+    ASSERT((in != NULL))    
+    ASSERT((pool != NULL))
+    ASSERT((result != NULL))
+
+    enum loopControl { LOOP, BREAK_LOOP } loopState = BREAK_LOOP;
+    struct pr6_client *retval = NULL;
+    uint16_t pos = 0U;
+    enum pr6_tag tag;
+    uint16_t ret;
+
+    memset(r, 0, sizeof(struct pr6_client));
+
+    if(poolMax > 0U){
+
+        memset(pool, 0, poolMax * sizeof(struct pr6_client_req_res));
+
+        r->list = pool;    
+        r->listMax = poolMax;
+        r->state = PR6_CLIENT_STATE_REQ;        
+        r->cbResult = result;
+
+#ifndef NDEBUG
+        r->magic = CLIENT_STATE_MAGIC;
+#endif
+        r->reqLen = inLen;
+        
+        if(inLen > 0){
+
+            if(PR6_CastTag(in[pos], &tag) > 0U){
+
+                switch(tag){
+                case PR6_METHOD_REQ:
+                case PR6_METHOD_BOE_REQ:
+                case PR6_METHOD_NC_BOE_REQ:
+                case PR6_METHOD_NC_REQ:
+
+                    switch(tag){
+                    case PR6_METHOD_NC_BOE_REQ:
+                    case PR6_METHOD_NC_REQ:
+                        r->confirmed = false;
+                        break;
+                    case PR6_METHOD_RES:
+                    case PR6_METHOD_REQ:
+                    case PR6_METHOD_BOE_REQ:
+                    default:
+                        r->confirmed = true;
+                    }
+                    
+                    switch(tag){                    
+                    case PR6_METHOD_BOE_REQ:
+                    case PR6_METHOD_NC_BOE_REQ:                    
+                        r->breakOnError = true;
+                        break;
+                    case PR6_METHOD_REQ:
+                    case PR6_METHOD_RES:
+                    case PR6_METHOD_NC_REQ:
+                    default:
+                        r->breakOnError = false;
+                    }
+
+                    pos += PR6_SIZE_TAG;
+
+                    while(pos < inLen){
+
+                        loopState = BREAK_LOOP;
+
+                        if(r->listMax > r->listSize){
+
+                            if((inLen - pos) >= PR6_SIZE_METHOD_ID){
+                                
+                                r->list[r->listSize].objectID = getObjectID(&in[pos]);
+                                pos += PR6_SIZE_OBJECT_ID;
+                                r->list[r->listSize].methodIndex = in[pos];
+                                pos += PR6_SIZE_METHOD_INDEX;
+                                ret = PR6_GetVint(&in[pos], inLen - pos, &r->list[r->listSize].argLen);
+
+                                if(ret > 0U){
+
+                                    pos += ret;
+                                    r->list[r->listSize].arg = &in[pos];
+
+                                    if((inLen - pos) >= r->list[r->listSize].argLen){
+                                    
+                                        pos += r->list[r->listSize].argLen;
+                                        r->listSize++;
+                                        loopState = LOOP;                                        
+                                    }
+                                    else{
+
+                                        DEBUG("input too short for argument")
+                                    }
+                                }
+                                else{
+
+                                    DEBUG("input too short for argument length determinant")
+                                }                                                
+                            }
+                            else{
+
+                                DEBUG("input too short for next method-id")
+                            }
+                        }
+                        else{
+
+                            DEBUG("input exceeds poolMax")
+                        }
+
+                        if(loopState == BREAK_LOOP){
+
+                            break;
+                        }
+                    }
+
+                    if(loopState == LOOP){
+
+                        retval = r;                        
+                    }
+                    break;
+
+                case PR6_METHOD_RES:
+                default:
+                    DEBUG("unexpected message")
+                    break;
+                }
+            }
+            else{
+
+                DEBUG("cannot debug tag")
+            }
+        }
+        else{
+
+            DEBUG("zero length input")
+        }
+    }
+
+    return retval;
+}
+                
 struct pr6_client *PR6_ClientInit_AddMethod(struct pr6_client *r, uint16_t objectID, uint8_t methodIndex, const uint8_t *arg, uint16_t argLen)
 {
     ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
@@ -484,4 +626,13 @@ static uint8_t castResult(uint8_t in, enum pr6_client_result *out)
     }
 
     return retval;
+}
+
+static uint16_t getObjectID(const uint8_t *in)
+{
+    uint16_t ret = in[0];
+    ret <<= 8U;
+    ret |= in[1];
+    
+    return ret;
 }
