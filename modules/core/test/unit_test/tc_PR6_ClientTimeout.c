@@ -80,12 +80,12 @@ void test_PR6_ClientTimeout(void)
     expectedListSize = sizeof(result) / sizeof(struct pr6_client_req_res);
     expectedList = result;
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));
+    
     TEST_ASSERT_TRUE(PR6_ClientOutput(&client, output, sizeof(output)) > 0U);
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
+    
 
     PR6_ClientTimeout(&client);
 
     TEST_ASSERT_EQUAL(cbResultTouch, 1);
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsComplete(&client));
+    
 }

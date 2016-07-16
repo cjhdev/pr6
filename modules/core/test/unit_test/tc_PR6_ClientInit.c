@@ -53,9 +53,6 @@ void test_PR6_ClientInit(void)
 
     /* assert that confirmed setting can be read from instance */
     TEST_ASSERT_EQUAL(true, PR6_ClientIsConfirmed(&client));
-
-    /* assert that state can be read from instance */
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));        
 }
 
 void test_PR6_ClientInit_AddMethod(void)
@@ -76,60 +73,6 @@ void test_PR6_ClientInit_AddMethod(void)
 
     /* assert that confirmed setting can be read from instance */
     TEST_ASSERT_EQUAL(true, PR6_ClientIsConfirmed(&client));
-
-    /* assert that state can be read from instance */
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));        
-}
-
-void test_PR6_ClientInit_AddMethod_afterSend(void)
-{
-    uint8_t out[20U];
-    struct pr6_client client;
-    struct pr6_client_req_res pool[1U];
-    uint16_t poolMax = sizeof(pool) / sizeof(*pool);
-    bool confirmed = true;
-    bool breakOnError = false;
-    
-    /* assert that client instance can be initialised */
-    TEST_ASSERT_EQUAL_PTR(&client, PR6_ClientInit(&client, pool, poolMax, confirmed, breakOnError, cbResult, 42, 1, (const uint8_t *)"hello", strlen("hello")));
-    
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));        
-    
-    TEST_ASSERT_TRUE(PR6_ClientOutput(&client, out, sizeof(out)) > 0U);
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
-
-    TEST_ASSERT_EQUAL_PTR(NULL, PR6_ClientInit_AddMethod(&client, 42, 1, (const uint8_t *)"hello", strlen("hello")));    
-}
-
-void test_PR6_ClientInit_AddMethod_afterReceive(void)
-{
-    uint8_t out[20U];    
-    struct pr6_client client;
-    struct pr6_client_req_res pool[1U];
-    uint16_t poolMax = sizeof(pool) / sizeof(*pool);
-    bool confirmed = true;
-    bool breakOnError = false;
-    const uint8_t input[] = {
-        PR6_METHOD_RES,
-            0x00, 0x00,
-            PR6_RESULT_SUCCESS,
-            strlen("world"), 'w', 'o', 'r', 'l', 'd'
-    };
-
-    TEST_ASSERT_EQUAL_PTR(&client, PR6_ClientInit(&client, pool, poolMax, confirmed, breakOnError, cbResult, 42, 1, (const uint8_t *)"hello", strlen("hello")));
-    
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));        
-    
-    TEST_ASSERT_TRUE(PR6_ClientOutput(&client, out, sizeof(out)) > 0U);
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
-
-    PR6_ClientInput(&client, 0, input, sizeof(input));
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsComplete(&client));
-
-    TEST_ASSERT_EQUAL_PTR(NULL, PR6_ClientInit_AddMethod(&client, 42, 1, (const uint8_t *)"hello", strlen("hello")));    
 }
 
 void test_PR6_ClientInit_FromMessage(void)
@@ -162,9 +105,5 @@ void test_PR6_ClientInit_FromMessage(void)
 
     /* assert that confirmed setting can be read from instance */
     TEST_ASSERT_EQUAL(true, PR6_ClientIsConfirmed(&client));
-
-    /* assert that state can be read from instance */
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));        
-
 }
 

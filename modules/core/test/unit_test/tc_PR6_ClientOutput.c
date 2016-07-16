@@ -54,9 +54,7 @@ void tearDown(void)
 }
 
 void test_PR6_ClientOutput(void)
-{
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));
-
+{    
     uint8_t expectedOut[] = {
         PR6_METHOD_REQ,
             0x00, 42,
@@ -71,13 +69,9 @@ void test_PR6_ClientOutput(void)
 
 void test_PR6_ClientOutput_multiple(void)
 {
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));
-
     TEST_ASSERT_EQUAL(&client, PR6_ClientInit_AddMethod(&client, 42, 2, (const uint8_t *)"again", strlen("again")));
     TEST_ASSERT_EQUAL(&client, PR6_ClientInit_AddMethod(&client, 42, 3, (const uint8_t *)"helloworld", strlen("helloworld")));
     TEST_ASSERT_EQUAL(&client, PR6_ClientInit_AddMethod(&client, 42, 4, (const uint8_t *)"hello", strlen("hello")));
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));
 
     uint8_t expectedOut[] = {
         PR6_METHOD_REQ,
@@ -98,14 +92,10 @@ void test_PR6_ClientOutput_multiple(void)
 
     TEST_ASSERT_EQUAL(sizeof(expectedOut), PR6_ClientOutput(&client, out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 }
 
 void test_PR6_ClientOutput_outputTooShort(void)
 {
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));
-
     uint8_t expectedOut[] = {
         PR6_METHOD_REQ,
             0x00, 42,
@@ -115,13 +105,10 @@ void test_PR6_ClientOutput_outputTooShort(void)
     uint8_t out[sizeof(expectedOut)-1];
 
     TEST_ASSERT_EQUAL(0U, PR6_ClientOutput(&client, out, sizeof(out)));
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));    
 }
 
 void test_PR6_ClientOutput_retry(void)
 {
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));
-
     uint8_t expectedOut[] = {
         PR6_METHOD_REQ,
             0x00, 42,
@@ -132,13 +119,9 @@ void test_PR6_ClientOutput_retry(void)
 
     TEST_ASSERT_EQUAL(sizeof(expectedOut), PR6_ClientOutput(&client, out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
     
     TEST_ASSERT_EQUAL(sizeof(expectedOut), PR6_ClientOutput(&client, out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 }
 
 void test_PR6_ClientOutput_nonConfirmed(void)
@@ -150,7 +133,6 @@ void test_PR6_ClientOutput_nonConfirmed(void)
     
     TEST_ASSERT_EQUAL(&client, PR6_ClientInit(&client, pool, poolMax, confirmed, breakOnError, cbResult, 42, 1, (const uint8_t *)"hello", strlen("hello")));    
     TEST_ASSERT_EQUAL(&client, PR6_ClientInit_AddMethod(&client, 42, 1, (const uint8_t *)"hello", strlen("hello")));    
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsInitialised(&client));
 
     uint8_t expectedOut[] = {
         PR6_METHOD_NC_REQ,
@@ -167,6 +149,4 @@ void test_PR6_ClientOutput_nonConfirmed(void)
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
 
     TEST_ASSERT_EQUAL(1, cbResultTouch);
-    
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsComplete(&client));
 }

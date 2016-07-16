@@ -75,8 +75,6 @@ struct pr6_client *PR6_ClientInit(struct pr6_client *r, struct pr6_client_req_re
         r->confirmed = confirmed;
         r->breakOnError = breakOnError;
 
-        r->state = PR6_CLIENT_STATE_INIT;
-        
         r->cbResult = result;
 
 #ifndef NDEBUG
@@ -123,8 +121,7 @@ struct pr6_client *PR6_ClientInit_FromMessage(struct pr6_client *r, struct pr6_c
         memset(pool, 0, poolMax * sizeof(struct pr6_client_req_res));
 
         r->list = pool;    
-        r->listMax = poolMax;
-        r->state = PR6_CLIENT_STATE_REQ;        
+        r->listMax = poolMax;        
         r->cbResult = result;
 
 #ifndef NDEBUG
@@ -251,28 +248,21 @@ struct pr6_client *PR6_ClientInit_AddMethod(struct pr6_client *r, uint16_t objec
 
     struct pr6_client *retval = NULL;
 
-    if(r->state == PR6_CLIENT_STATE_INIT){
+    if(r->listSize < r->listMax){
 
-        if(r->listSize < r->listMax){
+        r->list[r->listSize].objectID = objectID;
+        r->list[r->listSize].methodIndex = methodIndex;
+        r->list[r->listSize].arg = arg;
+        r->list[r->listSize].argLen = argLen;
+        r->listSize++;
+        r->reqLen += PR6_SIZE_METHOD_ID + PR6_SizeofVint(argLen) + argLen;
 
-            r->list[r->listSize].objectID = objectID;
-            r->list[r->listSize].methodIndex = methodIndex;
-            r->list[r->listSize].arg = arg;
-            r->list[r->listSize].argLen = argLen;
-            r->listSize++;
-            r->reqLen += PR6_SIZE_METHOD_ID + PR6_SizeofVint(argLen) + argLen;
-
-            retval = r;            
-        }
-        else{
-
-            DEBUG("cannot add method invocation because pool is exhausted")
-        }        
+        retval = r;            
     }
     else{
 
-        DEBUG("cannot add a method invocation to an active client instance")
-    }
+        DEBUG("cannot add method invocation because pool is exhausted")
+    }            
 
     return retval;        
 }
@@ -291,158 +281,145 @@ void PR6_ClientInput(struct pr6_client *r, uint16_t expectedCounter, const uint8
     ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
     ASSERT((  (inLen == 0U) || ((inLen > 0U) && (in != NULL)) ))
     
-    switch(r->state){
-    case PR6_CLIENT_STATE_REQ:
+    if(inLen > 0U){
 
-        if(inLen > 0U){
+        if(PR6_CastTag(in[pos], &tag) > 0U){
 
-            if(PR6_CastTag(in[pos], &tag) > 0U){
+            pos += PR6_SIZE_TAG;
 
-                pos += PR6_SIZE_TAG;
+            if((inLen - pos) >= PR6_SIZE_RES_COUNTER){
 
-                if((inLen - pos) >= PR6_SIZE_RES_COUNTER){
+                /* expected counter will never be zero, therefore by specifying zero you
+                 * are saying you don't care about correlation */
+                if((expectedCounter == 0U) || (getCounter(&in[pos]) == expectedCounter)){
 
-                    /* expected counter will never be zero, therefore by specifying zero you
-                     * are saying you don't care about correlation */
-                    if((expectedCounter == 0U) || (getCounter(&in[pos]) == expectedCounter)){
+                    /* skip over the counter value since it
+                     * is too late to use it to correlate response to
+                     * client (request) */
+                    pos += PR6_SIZE_RES_COUNTER;
+                    
+                    switch(tag){
+                    case PR6_METHOD_RES:
 
-                        /* skip over the counter value since it
-                         * is too late to use it to correlate response to
-                         * client (request) */
-                        pos += PR6_SIZE_RES_COUNTER;
-                        
-                        switch(tag){
-                        case PR6_METHOD_RES:
+                        m.resultListSize = 0U;
+                        m.resultList = &in[pos];
+                        m.resultListLen = 0U;
 
-                            m.resultListSize = 0U;
-                            m.resultList = &in[pos];
-                            m.resultListLen = 0U;
+                        while(pos < inLen){
 
-                            while(pos < inLen){
+                            loopState = BREAK_LOOP;
+                            
+                            if((inLen - pos) >= PR6_SIZE_RESULT){
 
-                                loopState = BREAK_LOOP;
-                                
-                                if((inLen - pos) >= PR6_SIZE_RESULT){
+                                if(castResult(in[pos], &result) > 0U){
 
-                                    if(castResult(in[pos], &result) > 0U){
+                                    m.resultListLen++;
+                                    m.resultListSize++;
+                                    pos += PR6_SIZE_RESULT;
 
-                                        m.resultListLen++;
-                                        m.resultListSize++;
-                                        pos += PR6_SIZE_RESULT;
+                                    if(result == PR6_CLIENT_RESULT_SUCCESS){
 
-                                        if(result == PR6_CLIENT_RESULT_SUCCESS){
+                                        ret = PR6_GetVint(&in[pos], inLen - pos, &size);
 
-                                            ret = PR6_GetVint(&in[pos], inLen - pos, &size);
+                                        if(ret > 0U){                                        
 
-                                            if(ret > 0U){                                        
+                                            pos += ret;
+                                            m.resultListLen += ret;
 
-                                                pos += ret;
-                                                m.resultListLen += ret;
+                                            if((inLen - pos) >= size){
 
-                                                if((inLen - pos) >= size){
-
-                                                    pos += size;
-                                                    m.resultListLen += size;
-                                                    loopState = LOOP;
-                                                }
-                                                else{
-
-                                                    DEBUG("input too short for argument")
-                                                }
+                                                pos += size;
+                                                m.resultListLen += size;
+                                                loopState = LOOP;
                                             }
                                             else{
 
-                                                DEBUG("invalid argument length encoding")
+                                                DEBUG("input too short for argument")
                                             }
                                         }
                                         else{
 
-                                            loopState = LOOP;
+                                            DEBUG("invalid argument length encoding")
                                         }
                                     }
-                                }
-                                else{
+                                    else{
 
-                                    DEBUG("input too short for result")
-                                }
-                            
-                                if(loopState == BREAK_LOOP){
-
-                                    break;
+                                        loopState = LOOP;
+                                    }
                                 }
                             }
+                            else{
 
-                            if(loopState == LOOP){                        
+                                DEBUG("input too short for result")
+                            }
+                        
+                            if(loopState == BREAK_LOOP){
 
-                                pos = 0U;
+                                break;
+                            }
+                        }
 
-                                if(m.resultListSize <= r->listSize){
+                        if(loopState == LOOP){                        
 
-                                    for(i=0U; i < r->listSize; i++){
+                            pos = 0U;
 
-                                        if(i < m.resultListSize){
+                            if(m.resultListSize <= r->listSize){
+
+                                for(i=0U; i < r->listSize; i++){
+
+                                    if(i < m.resultListSize){
+                                    
+                                        /* cast result code back to enumeration */
+                                        pos += castResult(m.resultList[pos], &r->list[i].result);
                                         
-                                            /* cast result code back to enumeration */
-                                            pos += castResult(m.resultList[pos], &r->list[i].result);
-                                            
-                                            /* successful result means there will be a returnValue */
-                                            if(r->list[i].result == PR6_CLIENT_RESULT_SUCCESS){
+                                        /* successful result means there will be a returnValue */
+                                        if(r->list[i].result == PR6_CLIENT_RESULT_SUCCESS){
 
-                                                pos += PR6_GetVint(&m.resultList[pos], m.resultListLen - pos, &r->list[i].returnValueLen);
-                                                r->list[i].returnValue = &m.resultList[pos];
-                                                pos += r->list[i].returnValueLen;
-                                            }
-                                        }
-                                        else{
-
-                                            r->list[i].result = PR6_CLIENT_RESULT_MISSING;
+                                            pos += PR6_GetVint(&m.resultList[pos], m.resultListLen - pos, &r->list[i].returnValueLen);
+                                            r->list[i].returnValue = &m.resultList[pos];
+                                            pos += r->list[i].returnValueLen;
                                         }
                                     }
-                                                                            
-                                    r->state = PR6_CLIENT_STATE_COMPLETE;
-                                    r->cbResult(r, r->listSize, r->list);
+                                    else{
+
+                                        r->list[i].result = PR6_CLIENT_RESULT_MISSING;
+                                    }
                                 }
-                                else{
+                                                                        
+                                r->cbResult(r, r->listSize, r->list);
+                            }
+                            else{
 
-                                    DEBUG("method-list size mismatch")
-                                }                                
-                            }                        
-                            
-                            break;
+                                DEBUG("method-list size mismatch")
+                            }                                
+                        }                        
+                        
+                        break;
 
-                        case PR6_METHOD_REQ:
-                        case PR6_METHOD_BOE_REQ:
-                        case PR6_METHOD_NC_REQ:
-                        case PR6_METHOD_NC_BOE_REQ:
-                        default:
-                            DEBUG("unexpected tag")
-                            break;
-                        }
-                    }
-                    else{
-
-                        DEBUG("counter does not match expectedCounter")
+                    case PR6_METHOD_REQ:
+                    case PR6_METHOD_BOE_REQ:
+                    case PR6_METHOD_NC_REQ:
+                    case PR6_METHOD_NC_BOE_REQ:
+                    default:
+                        DEBUG("unexpected tag")
+                        break;
                     }
                 }
                 else{
 
-                    DEBUG("input too short for counter")
+                    DEBUG("counter does not match expectedCounter")
                 }
             }
+            else{
+
+                DEBUG("input too short for counter")
+            }
         }
-        else{
+    }
+    else{
 
-            DEBUG("ignoring an empty message")
-        }
-        break;
-
-    case PR6_CLIENT_STATE_COMPLETE:
-    case PR6_CLIENT_STATE_INIT:
-    default:
-
-        DEBUG("ignoring a message while instance in non-receptive state (state = %u)", (uint8_t)r->state)
-        break;
-    }                
+        DEBUG("ignoring an empty message")
+    }        
 }
 
 uint16_t PR6_ClientOutput(struct pr6_client *r, uint8_t *out, uint16_t outMax)
@@ -452,61 +429,48 @@ uint16_t PR6_ClientOutput(struct pr6_client *r, uint8_t *out, uint16_t outMax)
     
     ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
     ASSERT((  (outMax == 0U) || ((outMax > 0U) && (out != NULL)) ))
+    
+    if(outMax >= r->reqLen){
 
-    switch(r->state){
-    case PR6_CLIENT_STATE_INIT:
-    case PR6_CLIENT_STATE_REQ:
+        if(r->confirmed == true){
 
-        if(outMax >= r->reqLen){
+            out[outLen] = (r->breakOnError == true) ? (uint8_t)PR6_METHOD_BOE_REQ : (uint8_t)PR6_METHOD_REQ;
+        }
+        else{
 
-            if(r->confirmed == true){
+            out[outLen] = (r->breakOnError == true) ? (uint8_t)PR6_METHOD_NC_BOE_REQ : (uint8_t)PR6_METHOD_NC_REQ;
+        }
 
-                out[outLen] = (r->breakOnError == true) ? (uint8_t)PR6_METHOD_BOE_REQ : (uint8_t)PR6_METHOD_REQ;
-            }
-            else{
+        outLen += PR6_SIZE_TAG;
 
-                out[outLen] = (r->breakOnError == true) ? (uint8_t)PR6_METHOD_NC_BOE_REQ : (uint8_t)PR6_METHOD_NC_REQ;
-            }
+        for(i=0; i < r->listSize; i++){
 
-            outLen += PR6_SIZE_TAG;
+            outLen += putObjectID(r->list[i].objectID, &out[outLen]);
+
+            out[outLen] = r->list[i].methodIndex;
+            outLen += PR6_SIZE_METHOD_INDEX;
+
+            outLen += PR6_PutVint(r->list[i].argLen, &out[outLen], outMax - outLen);
+            
+            memcpy(&out[outLen], r->list[i].arg, (size_t)r->list[i].argLen);
+            outLen += r->list[i].argLen;
+        }
+
+        ASSERT((outLen == r->reqLen))
+
+        if(r->confirmed == false){
 
             for(i=0; i < r->listSize; i++){
 
-                outLen += putObjectID(r->list[i].objectID, &out[outLen]);
-
-                out[outLen] = r->list[i].methodIndex;
-                outLen += PR6_SIZE_METHOD_INDEX;
-
-                outLen += PR6_PutVint(r->list[i].argLen, &out[outLen], outMax - outLen);
-                
-                memcpy(&out[outLen], r->list[i].arg, (size_t)r->list[i].argLen);
-                outLen += r->list[i].argLen;
+                r->list[i].result = PR6_CLIENT_RESULT_SUCCESS;
+                r->list[i].returnValue = NULL;
+                r->list[i].returnValueLen = 0U;                        
             }
 
-            ASSERT((outLen == r->reqLen))
-
-            r->state = PR6_CLIENT_STATE_REQ;
-
-            if(r->confirmed == false){
-
-                for(i=0; i < r->listSize; i++){
-
-                    r->list[i].result = PR6_CLIENT_RESULT_SUCCESS;
-                    r->list[i].returnValue = NULL;
-                    r->list[i].returnValueLen = 0U;                        
-                }
-
-                r->state = PR6_CLIENT_STATE_COMPLETE;
-                r->cbResult(r, r->listSize, r->list);
-            }
-        }                    
-        break;
-
-    case PR6_CLIENT_STATE_COMPLETE:    
-    default:
-        /* no action */
-        break;
-    }
+            r->cbResult(r, r->listSize, r->list);
+        }
+    }                    
+        
 
     return outLen;
 }
@@ -523,44 +487,17 @@ bool PR6_ClientIsBreakOnError(const struct pr6_client *r)
     return r->breakOnError;
 }
 
-bool PR6_ClientIsInitialised(const struct pr6_client *r)
-{
-    ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
-    return (r->state == PR6_CLIENT_STATE_INIT) ? true : false;
-}
-
-bool PR6_ClientIsSent(const struct pr6_client *r)
-{
-    ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
-    return (r->state == PR6_CLIENT_STATE_REQ) ? true : false;
-}
-
-bool PR6_ClientIsComplete(const struct pr6_client *r)
-{
-    ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
-    return (r->state == PR6_CLIENT_STATE_COMPLETE) ? true : false;
-}
-
 void PR6_ClientTimeout(struct pr6_client *r)
 {
     ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
 
     uint16_t i;
 
-    switch(r->state){
-    case PR6_CLIENT_STATE_INIT:
-    case PR6_CLIENT_STATE_REQ:    
-        r->state = PR6_CLIENT_STATE_COMPLETE;
-        for(i=0U; i < r->listSize; i++){
+    for(i=0U; i < r->listSize; i++){
 
-            r->list[i].result = PR6_CLIENT_RESULT_TIMEOUT;
-        }
-        r->cbResult(r, r->listSize, r->list); 
-        break;
-    case PR6_CLIENT_STATE_COMPLETE:
-    default:
-        break;
+        r->list[i].result = PR6_CLIENT_RESULT_TIMEOUT;
     }
+    r->cbResult(r, r->listSize, r->list); 
 }
 
 uint16_t PR6_ClientPeekCounter(const uint8_t *in, uint16_t inLen, uint16_t *counter)

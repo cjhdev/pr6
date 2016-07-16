@@ -67,13 +67,10 @@ void test_PR6_ClientInput(void)
             strlen("world"), 'w', 'o', 'r', 'l', 'd'
     };
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 
     PR6_ClientInput(&client, 0, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(1U , cbResultTouch);
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsComplete(&client));    
 }
 
 void test_PR6_ClientInput_listSizeMismatch(void)
@@ -87,13 +84,9 @@ void test_PR6_ClientInput_listSizeMismatch(void)
             strlen("world"), 'w', 'o', 'r', 'l', 'd'
         };
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
-
     PR6_ClientInput(&client, 0, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 }
 
 void test_PR6_ClientInput_expectedCounterMismatch(void)
@@ -105,13 +98,9 @@ void test_PR6_ClientInput_expectedCounterMismatch(void)
             strlen("world"), 'w', 'o', 'r', 'l', 'd',            
         };
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
-
     PR6_ClientInput(&client, 2, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 }
 
 void test_PR6_ClientInput_padded(void)
@@ -123,13 +112,10 @@ void test_PR6_ClientInput_padded(void)
             strlen("world"), 'w', 'o', 'r', 'l', 'd', 0x00
         };
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
-
     PR6_ClientInput(&client, 0, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 }
 
 void test_PR6_ClientInput_boundaryCounter(void)
@@ -138,13 +124,9 @@ void test_PR6_ClientInput_boundaryCounter(void)
         PR6_METHOD_RES            
     };
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
-
     PR6_ClientInput(&client, 0, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 }
 
 void test_PR6_ClientInput_boundaryResult(void)
@@ -154,13 +136,9 @@ void test_PR6_ClientInput_boundaryResult(void)
             0x00, 0x01,
     };
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
-
     PR6_ClientInput(&client, 0, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 }
 
 void test_PR6_ClientInput_boundaryReturnValueEncoding(void)
@@ -171,13 +149,9 @@ void test_PR6_ClientInput_boundaryReturnValueEncoding(void)
             PR6_RESULT_SUCCESS
     };
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
-
     PR6_ClientInput(&client, 0, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 }
 
 void test_PR6_ClientInput_boundaryReturnValue(void)
@@ -189,12 +163,8 @@ void test_PR6_ClientInput_boundaryReturnValue(void)
             strlen("world")
     };
 
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
-
     PR6_ClientInput(&client, 0, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
-
-    TEST_ASSERT_EQUAL(true, PR6_ClientIsSent(&client));
 }
 

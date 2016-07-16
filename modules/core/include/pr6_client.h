@@ -43,14 +43,6 @@ extern "C" {
 
 /* enums **************************************************************/
 
-/** Client instance state */
-enum pr6_client_state {
-
-    PR6_CLIENT_STATE_INIT = 0,         /**< Client has been initialised */
-    PR6_CLIENT_STATE_REQ,              /**< Client has sent a request */
-    PR6_CLIENT_STATE_COMPLETE          /**< Client completed the request */
-};
-
 enum pr6_client_result {
 
     PR6_CLIENT_RESULT_SUCCESS = 0,          /**< successful invocation */
@@ -86,8 +78,6 @@ struct pr6_client {
 #ifndef NDEBUG
     uint32_t magic; /**< used to detect uninitialised client instances */
 #endif
-
-    enum pr6_client_state state;   /**< stores the state of this client instance */ 
 
     bool confirmed;     /**< If true Server shall confirm the Request */
     bool breakOnError;  /**< If true Server shall halt invocation of Request on first error */
@@ -200,33 +190,6 @@ void PR6_ClientInput(struct pr6_client *r, uint16_t expectedCounter, const uint8
  *
  * */
 uint16_t PR6_ClientOutput(struct pr6_client *r, uint8_t *out, uint16_t outMax);
-
-/**
- * Return true if Client is in initialised state
- *
- * @param[in] r Client instance
- * @return ClientIsInitialised?
- *
- * */
-bool PR6_ClientIsInitialised(const struct pr6_client *r);
-
-/**
- * Return true if Client is in a PR6_CLIENT_STATE_SENT state
- *
- * @param[in] r Client instance
- * @return ClientIsSent?
- *
- * */
-bool PR6_ClientIsSent(const struct pr6_client *r);
-
-/**
- * Return true if Client is in a PR6_CLIENT_STATE_COMPLETE state
- *
- * @param[in] r Client instance
- * @return ClientIsComplete?
- *
- * */
-bool PR6_ClientIsComplete(const struct pr6_client *r);
 
 /**
  * Return true if client was initialised with a confirmable request
