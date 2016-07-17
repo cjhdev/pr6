@@ -17,38 +17,32 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-require 'wrangle/eui64'
+require 'wrangle/ext_wrangle'
 
 module Wrangle
 
-    class EUI64
+    class Server
 
-        # Cantor pairing function for two EUI64 Strings
+        # @!method initialize(association)
         #
-        # @param localID [String] EUI64
-        # @param remoteID [String] EUI64
-        # @return [Integer]
-        def self.pair(localID, remoteID)
+        # @param association [Association]
+        #
+        # @raise [ArgumentError]
+        #
 
-            k1 = EUI64.new(localID).to_i
-            k2 = EUI64.new(remoteID).to_i
+        # @!method input(counter, input)
+        #
+        # Deliver message to server and receive a response
+        #
+        # @param msg [String] input message
+        # @return [String] output message
+        #
+        #
 
-            pair = 0.5 * ( k1 + k2 ) * (k1 + k2 + 1)
-
-            if k1 < k2
-
-                pair + k2
-
-            else
-
-                pair + k1
-
-            end
-
-            pair.to_i
-
-        end
-
+        # @!method association
+        #
+        # @return [Association]
+        
     end
     
 end

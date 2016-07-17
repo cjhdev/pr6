@@ -166,3 +166,4 @@ uint8_t PR6_SizeofVint(uint16_t in)
 
     return retval;
 }
+

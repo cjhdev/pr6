@@ -17,38 +17,36 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-require 'wrangle/eui64'
-
 module Wrangle
 
-    class EUI64
+    class MethodRequest
 
-        # Cantor pairing function for two EUI64 Strings
-        #
-        # @param localID [String] EUI64
-        # @param remoteID [String] EUI64
-        # @return [Integer]
-        def self.pair(localID, remoteID)
+        # @param objectID [Integer]
+        # @param methodIndex [Integer]
+        # @param argument [String]
+        def initialize(objectID, methodIndex, argument)
 
-            k1 = EUI64.new(localID).to_i
-            k2 = EUI64.new(remoteID).to_i
+            if !objectID.is_a? Integer or objectID > OBJECT_ID_MAX; raise ArgumentError end
+            if !methodIndex.is_a? Integer or methodIndex > METHOD_INDEX_MAX; raise ArgumentError end
+            if !argument.is_a? String; raise ArgumentError end
 
-            pair = 0.5 * ( k1 + k2 ) * (k1 + k2 + 1)
-
-            if k1 < k2
-
-                pair + k2
-
-            else
-
-                pair + k1
-
-            end
-
-            pair.to_i
+            @objectID = objectID
+            @methodIndex = methodIndex
+            @argument = argument
 
         end
 
+        # return [Integer]
+        attr_reader :objectID
+
+        # return [Integer]
+        attr_reader :methodIndex
+
+        # return [String]
+        attr_reader :argument
+
     end
-    
+
 end
+
+

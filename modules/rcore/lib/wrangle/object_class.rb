@@ -1,11 +1,35 @@
+# Copyright (c) 2016 Cameron Harper
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy of
+# this software and associated documentation files (the "Software"), to deal in
+# the Software without restriction, including without limitation the rights to
+# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+# the Software, and to permit persons to whom the Software is furnished to do so,
+# subject to the following conditions:
+#  
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+# FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+# COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+# IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+# CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+
 require 'wrangle/constants'
-require 'wrangle/peer'
 
 module Wrangle
 
-    class MethodHandlerResult < Exception; end
+    class MethodHandlerResult < Exception
+    end
+    class MethodHandlerPause < Exception
+    end
     
     class ObjectClass
+
+        @objects = {}
 
         VERSIONED_NAME_REGEX = /^(?<name>([A-Z][A-Za-z0-9]*))CID(?<classID>[0-9a-fA-F]{4})V(?<version>[0-9]+)$/
         NAME_REGEX = /^(?<name>([A-Z][A-Za-z0-9]*))CID(?<classID>[0-9a-fA-F]{4})$/
@@ -18,8 +42,6 @@ module Wrangle
         end
 
         def self.defineClass
-
-            #if !classID.is_a? Integer or classID > CLASS_ID_MAX; raise ArgumentError.new "classID must be an Integer in the range (0..#{CLASS_ID_MAX})" end
 
             name = self.name.split('::').last
             match = VERSIONED_NAME_REGEX.match(name)
@@ -61,19 +83,23 @@ module Wrangle
         # @param description [String] description of class
         # @return [String]
         def self.classDescription(description)
-
             @description = description
-
         end
 
         # @return [String] Class Name
-        def self.className; return @className end
+        def self.className
+            @className
+        end
 
         # @return [Integer] Class Identifier
-        def self.classID; return @classID end
+        def self.classID
+            @classID
+        end
 
         # @return [Integer] Class Version
-        def self.classVersion; return @classVersion end
+        def self.classVersion
+            @classVersion
+        end
 
         # @param methodName [String] optional methodName
         #
@@ -107,13 +133,19 @@ module Wrangle
         attr_reader :objectName
 
         # @return [String] Class Name
-        def className; self.class.className end
+        def className
+            self.class.className
+        end
 
         # @return [Integer] Class Identifier
-        def classID; self.class.classID end        
+        def classID
+            self.class.classID
+        end        
 
         # @return [Integer] Class Version
-        def classVersion; self.class.classVersion end
+        def classVersion
+            self.class.classVersion
+        end
 
         # @param objectID [Integer] unique ObjectIdentifier
         # @param objectName [String, nil] optional human readable name for instance
@@ -130,8 +162,6 @@ module Wrangle
             @method = {}
 
             instance_eval(&handlers)
-
-            Peer.addObject self
             
         end
 
@@ -151,17 +181,23 @@ module Wrangle
     
             if @method[methodIndex]
 
-                if (@method[methodIndex][:role] & caller.role).size > 0
-
-                    @argument = argument
+                if (@method[methodIndex][:role] & caller.association.assignedRole).size > 0
 
                     begin
 
-                        { :adapterResult => :PR6_ADAPTER_SUCCESS, :result => :PR6_RESULT_SUCCESS, :returnValue => instance_eval(&@method[methodIndex][:handler]) }
+                        { :adapterResult => :PR6_ADAPTER_SUCCESS, :result => :PR6_RESULT_SUCCESS, :returnValue => self.instance_exec(argument, &@method[methodIndex][:handler]) }
 
                     rescue MethodHandlerResult => ex
 
                         { :adapterResult => :PR6_ADAPTER_SUCCESS, :result => ex.message.to_sym }
+
+                    rescue MethodHandlerPause
+
+                        { :adapterResult => :PR6_ADAPTER_YIELD }
+
+                    rescue
+
+                        raise
 
                     end
 
@@ -261,13 +297,23 @@ module Wrangle
             end
             
             # Called by #methodHandler to halt execution for reason of argument format
-            def haltForArgument; raise MethodHandlerResult.new :PR6_RESULT_ARGUMENT end
+            def haltForArgument
+                raise MethodHandlerResult.new :PR6_RESULT_ARGUMENT
+            end
 
             # Called by #methodHandler to halt execution for unspecified permament failure condition
-            def haltForPermanent; raise MethodHandlerResult.new :PR6_RESULT_PERMANENT end
+            def haltForPermanent
+                raise MethodHandlerResult.new :PR6_RESULT_PERMANENT
+            end
 
             # Called by #methodHandler to halt execution for unspecified temporary failure condition
-            def haltForTemporary; raise MethodHandlerResult.new :PR6_RESULT_TEMPORARY end
+            def haltForTemporary
+                raise MethodHandlerResult.new :PR6_RESULT_TEMPORARY
+            end
+
+            def pause
+                raise MethodHandlerPause
+            end
 
     end
 

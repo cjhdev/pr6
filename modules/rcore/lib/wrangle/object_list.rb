@@ -17,38 +17,28 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-require 'wrangle/eui64'
-
 module Wrangle
 
-    class EUI64
+    class ObjectList
 
-        # Cantor pairing function for two EUI64 Strings
-        #
-        # @param localID [String] EUI64
-        # @param remoteID [String] EUI64
-        # @return [Integer]
-        def self.pair(localID, remoteID)
+        @list = {}
 
-            k1 = EUI64.new(localID).to_i
-            k2 = EUI64.new(remoteID).to_i
+        def self.clear
+            @list = {}
+        end
 
-            pair = 0.5 * ( k1 + k2 ) * (k1 + k2 + 1)
+        def self.getObject(id)
+            @list[id]
+        end
 
-            if k1 < k2
-
-                pair + k2
-
+        def self.insert(object)
+            if @list[object.objectID]
+                raise "already have an object of same objectID in list"
             else
-
-                pair + k1
-
+                @list[object.objectID] = object
             end
-
-            pair.to_i
-
         end
 
     end
-    
+
 end
