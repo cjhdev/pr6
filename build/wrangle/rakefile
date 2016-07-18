@@ -1,0 +1,48 @@
+require 'rake/testtask'
+require 'rbconfig'
+
+DIR_ROOT = "../.."
+
+Rake::TestTask.new do |t|
+    
+    t.libs << "#{DIR_ROOT}/modules/rcore/lib"
+    t.test_files = FileList["#{DIR_ROOT}/modules/rcore/test/**/*tc_*.rb"]    
+    
+end
+
+desc "call make with ruby include paths"
+task :compile do
+
+    system 'make clean'    
+    system "make RUBY_HDR_DIR=\"#{RbConfig::CONFIG["rubyhdrdir"]}\" RUBY_ARCH_DIR=\"#{RbConfig::CONFIG["rubyarchhdrdir"]}\""
+    
+end
+
+desc "call make clean"
+task :clean do
+
+    system 'make clean'
+
+end
+
+desc "produce gem"
+task :package do
+
+    system "rm -rf gem/*"
+
+    system "cp #{DIR_ROOT}/modules/rcore/*              gem" 
+    system "cp -vr #{DIR_ROOT}/modules/rcore/test       gem"
+    system "cp -vr #{DIR_ROOT}/modules/rcore/lib        gem"
+    system "cp -vr #{DIR_ROOT}/modules/rcore/ext        gem"
+    system "cp -vr #{DIR_ROOT}/modules/rcore/bin        gem"
+    system "cp -vr #{DIR_ROOT}/modules/rcore/db         gem"
+    system "cp -vr #{DIR_ROOT}/modules/core/src/*       gem/ext/ext_wrangle"
+    system "cp -vr #{DIR_ROOT}/modules/core/include/*   gem/ext/ext_wrangle"
+    system "cp -vr #{DIR_ROOT}/modules/debug_interface/include/*   gem/ext/ext_wrangle"
+
+    system "cd gem && gem build wrangle.gemspec"
+    
+end
+
+
+task :default => :test
