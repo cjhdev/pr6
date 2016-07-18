@@ -18,20 +18,24 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-module Wrangle
-
-    class DB
-
-        @association = nil
-
-        def self.association=(db)
-            @association = db
-        end
-
-        def self.association
-            @association
-        end
-
+Sequel.migration do
+    up do
+        create_table(:associations) do
+            String :assocID, :null=>false
+            String :entityID, :null=>false
+            String :localID, :null=>false
+            String :remoteID, :null=>false
+            Integer :remoteMax, :null=>false
+            String :assignedRole, :null=>false
+            String :secret, :null=>false
+            Integer :invocationCounter, :null=>false
+            String :remoteInvocationCounter, :null=>false
+            Integer :remoteInvocationCounterWindow, :null=>false
+            primary_key([:entityID, :assocID], :name=>:association_pk)        
+        end        
     end
 
+    down do
+        drop_table(:Assocations)
+    end
 end

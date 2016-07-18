@@ -16,6 +16,7 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 require 'wrangle/eui64_pair'
 require 'set'
 require 'openssl'
@@ -24,7 +25,7 @@ module Wrangle
 
     class Association
 
-        attr_reader :assocID, :entityID, :localID, :remoteID, :assignedRole, :remoteMax, :secret, :inputCounter, :outputCounter, :inputCounterWindow
+        attr_reader :assocID, :entityID, :localID, :remoteID, :assignedRole, :remoteMax, :secret, :remoteInvocationCounter, :invocationCounter, :remoteInvocationCounterWindow
 
         def initialize(entityID, localID, remoteID, **opts)
             @assocID = EUI64.pair(localID, remoteID)
@@ -34,11 +35,11 @@ module Wrangle
             @remoteMax = 0
             @assignedRole = Set.new
             @secret = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".freeze
-            @inputCounterWindow = 1
-            @outputCounter = 0
-            @inputCounter = Set.new
+            @remoteInvocationCounterWindow = 1
+            @invocationCounter = 0
+            @remoteInvocationCounter = Set.new
             if opts[:remoteMax]
-                setRemoteMax(remoteMax)
+                self.remoteMax = opts[:remoteMax]
             end
             if opts[:assignedRole]
                 opts[:assignedRole].to_a.each do |role|
@@ -46,20 +47,20 @@ module Wrangle
                 end            
             end
             if opts[:secret]
-                setSecret(opts[:secret])
+                self.secret = opts[:secret]
             end
-            if opts[:inputCounterWindow]
-                setInputCounterWindow(opts[:inputCounterWindow])
+            if opts[:remoteInvocationCounterWindow]
+                self.remoteInvocationCounterWindow = opts[:remoteInvocationCounterWindow]
             end
-            if opts[:inputCounter]
-                setInputCounter(opts[:inputCounter])
+            if opts[:remoteInvocationCounter]
+                self.remoteInvocationCounter = opts[:remoteInvocationCounter]
             end
-            if opts[:outputCounter]
-                setOutputCounter(opts[:outputCounter])
+            if opts[:invocationCounter]
+                self.invocationCounter = opts[:invocationCounter]
             end            
         end
 
-        def setRemoteMax(max)
+        def remoteMax=(max)
             if max.to_i > 0xffff or max.to_i < 0
                 raise ArgumentError
             end
@@ -73,6 +74,10 @@ module Wrangle
 
         def revokeRole(role)
             @assignedRole.delete(role.to_sym)
+        end
+
+        def evaluateRole(role)
+            @assignedRole.include? role
         end
 
         def decryptGCM(iv, text, aad, mac)
@@ -132,23 +137,23 @@ module Wrangle
 
         end
 
-        def outputOutputCounter
-            if @outputCounter < 0xffffffff
-                @outputCounter += 1
+        def outputCounter
+            if @invocationCounter < 0xffffffff
+                @invocationCounter += 1
             else
-                raise
+                nil
             end
         end
 
-        def inputInputCounter(counter)
+        def inputCounter(counter)
             counter = counter.to_i
             result = false
             if counter > 0
-                if (@inputCounter.size == 0) or (!@inputCounter.include?(counter) and @inputCounter.min < counter)
-                    if @inputCounter.size == @inputCounterWindow
-                        @inputCounter.delete(@inputCounter.min)
+                if (@remoteInvocationCounter.size == 0) or (!@remoteInvocationCounter.include?(counter) and @remoteInvocationCounter.min < counter)
+                    if @remoteInvocationCounter.size == @remoteInvocationCounterWindow
+                        @remoteInvocationCounter.delete(@remoteInvocationCounter.min)
                     end
-                    @inputCounter.add(counter)
+                    @remoteInvocationCounter.add(counter)
                     result = true
                 end
             end
@@ -156,29 +161,29 @@ module Wrangle
             result
         end
 
-        def setSecret(secret)
-            if ![16, 24, 32].include? secret.to_s.size
+        def secret=(s)
+            if ![16, 24, 32].include? s.to_s.size
                 raise ArgumentError.new "secret must be a string 16, 24, or 32 bytes in size"
             end
-            @secret = secret.to_s
+            @secret = s.to_s
         end
 
-        def setInputCounterWindow(inputCounterWindow)
-            if inputCounterWindow <= 0
+        def remoteInvocationCounterWindow=(windowSize)
+            if windowSize <= 0
                 raise ArgumentError
             end
-            @inputCounterWindow = inputCounterWindow        
+            @remoteInvocationCounterWindow = windowSize
         end
 
-        def setInputCounter(inputCounter)
-            @inputCounter = inputCounter.to_set
+        def remoteInvocationCounter=(counter)
+            @remoteInvocationCounter = counter.to_set
         end
 
-        def setOutputCounter(outputCounter)
-            if !(0..0xfffffffe).include? outputCounter
+        def invocationCounter=(counter)
+            if !(0..0xffffffff).include? counter.to_i
                 raise ArgumentError
             end
-            @outputCounter = outputCounter
+            @invocationCounter = counter.to_i
         end
 
     end

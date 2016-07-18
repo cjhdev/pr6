@@ -34,9 +34,9 @@ class TestAssociation < Test::Unit::TestCase
         secret = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
         remoteMax = 0
         assignedRole = Set.new
-        inputCounter = Set.new
-        inputCounterWindow = 1
-        outputCounter = 0
+        remoteInvocationCounter = Set.new
+        remoteInvocationCounterWindow = 1
+        invocationCounter = 0
 
         a = Association.new(entityID, localID, remoteID)
 
@@ -46,9 +46,9 @@ class TestAssociation < Test::Unit::TestCase
         assert_equal(secret, a.secret)
         assert_equal(remoteMax, a.remoteMax)
         assert_equal(assignedRole, a.assignedRole)
-        assert_equal(inputCounter, a.inputCounter)
-        assert_equal(inputCounterWindow, a.inputCounterWindow)
-        assert_equal(outputCounter, a.outputCounter)        
+        assert_equal(remoteInvocationCounter, a.remoteInvocationCounter)
+        assert_equal(remoteInvocationCounterWindow, a.remoteInvocationCounterWindow)
+        assert_equal(invocationCounter, a.invocationCounter)        
     end
 
     def test_init
@@ -59,17 +59,17 @@ class TestAssociation < Test::Unit::TestCase
         secret = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
         remoteMax = 0
         assignedRole = [:public, :test].to_set
-        inputCounter = [0,1,4].to_set
-        inputCounterWindow = 5
-        outputCounter = 42
+        remoteInvocationCounter = [0,1,4].to_set
+        remoteInvocationCounterWindow = 5
+        invocationCounter = 42
 
         a = Association.new(entityID, localID, remoteID,
             secret: secret,
             remoteMax: remoteMax,
             assignedRole: assignedRole,
-            inputCounter: inputCounter,
-            inputCounterWindow: inputCounterWindow,
-            outputCounter: outputCounter
+            remoteInvocationCounter: remoteInvocationCounter,
+            remoteInvocationCounterWindow: remoteInvocationCounterWindow,
+            invocationCounter: invocationCounter
         )
 
         assert_equal(entityID, a.entityID)
@@ -78,9 +78,9 @@ class TestAssociation < Test::Unit::TestCase
         assert_equal(secret, a.secret)
         assert_equal(remoteMax, a.remoteMax)
         assert_equal(assignedRole, a.assignedRole)
-        assert_equal(inputCounter, a.inputCounter)
-        assert_equal(inputCounterWindow, a.inputCounterWindow)
-        assert_equal(outputCounter, a.outputCounter) 
+        assert_equal(remoteInvocationCounter, a.remoteInvocationCounter)
+        assert_equal(remoteInvocationCounterWindow, a.remoteInvocationCounterWindow)
+        assert_equal(invocationCounter, a.invocationCounter) 
     end
 
     def test_setRemoteMax
@@ -91,19 +91,19 @@ class TestAssociation < Test::Unit::TestCase
         a = Association.new(entityID, localID, remoteID)
 
         assert_raise ArgumentError do
-            a.setRemoteMax(0x10000)
+            a.remoteMax = 0x10000
         end
         assert_raise ArgumentError do
-            a.setRemoteMax(-1)
+            a.remoteMax = -1
         end
 
-        a.setRemoteMax(42)
+        a.remoteMax = 42
 
         assert_equal(42, a.remoteMax)
                 
     end
 
-    def test_outputOutputCounter
+    def test_outputCounter
 
         entityID = "00-00-00-00-00-00-00-01"
         localID = "00-00-00-00-00-00-00-01"
@@ -111,13 +111,13 @@ class TestAssociation < Test::Unit::TestCase
 
         a = Association.new(entityID, localID, remoteID)
 
-        assert_equal(1, a.outputOutputCounter)
-        assert_equal(2, a.outputOutputCounter)
-        assert_equal(3, a.outputOutputCounter)
+        assert_equal(1, a.outputCounter)
+        assert_equal(2, a.outputCounter)
+        assert_equal(3, a.outputCounter)
 
     end
 
-    def test_inputInputCounter
+    def test_inputCounter
 
         entityID = "00-00-00-00-00-00-00-01"
         localID = "00-00-00-00-00-00-00-01"
@@ -126,32 +126,32 @@ class TestAssociation < Test::Unit::TestCase
         a = Association.new(entityID, localID, remoteID)
 
         # never accept counter value zero
-        assert_equal(false, a.inputInputCounter(0))
+        assert_equal(false, a.inputCounter(0))
 
-        assert_equal(true, a.inputInputCounter(1))
-        assert_equal(false, a.inputInputCounter(1))
+        assert_equal(true, a.inputCounter(1))
+        assert_equal(false, a.inputCounter(1))
         
-        assert_equal(true, a.inputInputCounter(3))
-        assert_equal(false, a.inputInputCounter(2))
+        assert_equal(true, a.inputCounter(3))
+        assert_equal(false, a.inputCounter(2))
 
     end
 
-    def test_inputInputCounter_outOfOrder
+    def test_inputCounter_outOfOrder
 
         entityID = "00-00-00-00-00-00-00-01"
         localID = "00-00-00-00-00-00-00-01"
         remoteID = "00-00-00-00-00-00-00-ff"
 
-        a = Association.new(entityID, localID, remoteID, inputCounterWindow: 2)
+        a = Association.new(entityID, localID, remoteID, remoteInvocationCounterWindow: 2)
 
         # never accept counter value zero
-        assert_equal(false, a.inputInputCounter(0))
+        assert_equal(false, a.inputCounter(0))
 
-        assert_equal(true, a.inputInputCounter(1))
-        assert_equal(false, a.inputInputCounter(1))
+        assert_equal(true, a.inputCounter(1))
+        assert_equal(false, a.inputCounter(1))
 
-        assert_equal(true, a.inputInputCounter(3))
-        assert_equal(true, a.inputInputCounter(2))
+        assert_equal(true, a.inputCounter(3))
+        assert_equal(true, a.inputCounter(2))
 
     end
 

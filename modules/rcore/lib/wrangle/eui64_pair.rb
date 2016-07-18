@@ -45,7 +45,7 @@ module Wrangle
 
             end
 
-            pair.to_i
+            pair.to_i.to_s
 
         end
 
