@@ -5,3 +5,10 @@ script:
     - cd build/unit_test
     - make
     - make coverage
+    - cd ../wrangle
+    - rake clean
+    - rake compile
+    - rake package
+    - cd gem
+    - bundle install
+    - rake
