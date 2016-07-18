@@ -40,7 +40,7 @@ module Wrangle
         # @param msg [String] message to deliver to client
         #
 
-        # @!method output(outMax)
+        # @!method output(counter, outMax)
         #
         # Get message from client instance
         #
@@ -51,10 +51,6 @@ module Wrangle
         # @!method uuid
         #
         # @return [String] uuid of this instance
-
-        # @!method registerCounter(counter)
-        #
-        # @param counter [Integer]
 
     end
     

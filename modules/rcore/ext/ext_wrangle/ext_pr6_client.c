@@ -20,18 +20,15 @@ static VALUE ConstClient;
 
 /* static function prototypes *****************************************/
 
-static VALUE clientInitialize(VALUE self, VALUE confirmed, VALUE breakOnError, VALUE block);
-static VALUE clientInput(VALUE self, VALUE msg);
-static VALUE clientOutput(VALUE self, VALUE outMax);
+static VALUE clientInitialize(int argc, VALUE* argv, VALUE self);
+static VALUE clientInput(VALUE self, VALUE expectedCounter, VALUE msg);
+static VALUE clientOutput(int argc, VALUE* argv, VALUE self);
 static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list);
 static VALUE resultToSymbol(enum pr6_result result);
 static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOnError, VALUE requests);
 static VALUE uuid(VALUE self);
-static VALUE responseHandler(VALUE self, VALUE receiver, VALUE handler);
-static VALUE request(VALUE self, VALUE methodID);
-static VALUE setCounter(VALUE self, VALUE counter);
-static VALUE getCounter(VALUE self);
-
+static VALUE responseHandler(int argc, VALUE* argv, VALUE self);
+static VALUE request(VALUE self, VALUE objectID, VALUE methodIndex, VALUE argument);
 
 /* functions **********************************************************/
 
@@ -40,15 +37,13 @@ void EXT_PR6_ClientInit(void)
     VALUE wrangle = rb_define_module("Wrangle");
     ConstClient = rb_define_class_under(wrangle, "Client", rb_cObject);
 
-    rb_define_method(ConstClient, "initialize", clientInitialize, 5);
-    rb_define_method(ConstClient, "input", clientInput, 1);
-    rb_define_method(ConstClient, "output", clientOutput, 2);
+    rb_define_method(ConstClient, "initialize", clientInitialize, -1);
+    rb_define_method(ConstClient, "input", clientInput, 2);
+    rb_define_method(ConstClient, "output", clientOutput, -1);
     rb_define_method(ConstClient, "uuid", uuid, 0);
-    rb_define_method(ConstClient, "registerCounter", setCounter, 1);
-    rb_define_method(ConstClient, "counter", getCounter, 0);
 
-    rb_define_private_method(ConstClient, "request", request, 1);
-    rb_define_private_method(ConstClient, "responseHandler", responseHandler, 2);
+    rb_define_private_method(ConstClient, "request", request, 3);
+    rb_define_private_method(ConstClient, "response", responseHandler, -1);
     
     rb_require("wrangle/method_response");
     rb_require("wrangle/method_request");
@@ -56,6 +51,9 @@ void EXT_PR6_ClientInit(void)
         
     ConstMethodResponse = rb_const_get(wrangle, rb_intern("MethodResponse"));
     ConstMethodRequest = rb_const_get(wrangle, rb_intern("MethodRequest"));    
+    ConstSecureRandom = rb_const_get(rb_cObject, rb_intern("SecureRandom"));
+
+    rb_define_alloc_func(ConstClient, StateWrapperAlloc);   
 }
 
 /* static functions ***************************************************/
@@ -65,42 +63,55 @@ static VALUE uuid(VALUE self)
     return rb_iv_get(self, "@uuid");
 }
 
-static VALUE request(VALUE self, VALUE methodID)
+static VALUE request(VALUE self, VALUE objectID, VALUE methodIndex, VALUE argument)
 {
     if(NUM2UINT(rb_funcall(rb_iv_get(self, "@methods"), rb_intern("size"), 0)) > 0xffff){
 
-        rb_bug("too many methods for this version");
+        rb_bug("too many methods defined");
     }
 
-    if(rb_obj_is_kind_of(methodID, ConstMethodRequest) == Qtrue){
-
-        rb_ary_push(rb_iv_get(self, "@methods"), methodID);
-    }
-    else{
-        
-        rb_raise(rb_eArgError, "expecting a kind_of MethodRequest");
-    }
-
+    rb_ary_push(rb_iv_get(self, "@methods"), rb_funcall(ConstMethodRequest, rb_intern("new"), 3, objectID, methodIndex, argument));
+    
     return Qtrue;
 }
 
-static VALUE responseHandler(VALUE self, VALUE receiver, VALUE handler)
+static VALUE responseHandler(int argc, VALUE* argv, VALUE self)
 {
+    VALUE receiver;
+    VALUE opts;
+    VALUE handler;
+    
+    rb_scan_args(argc, argv, "01:&", &receiver, &opts, &handler);
+
     rb_iv_set(self, "@receiver", receiver);
     rb_iv_set(self, "@responseHandler", handler);
 
     return Qtrue;
 }
 
-static VALUE clientInitialize(VALUE self, VALUE confirmed, VALUE breakOnError, VALUE block)
+static VALUE clientInitialize(int argc, VALUE* argv, VALUE self)
 {
-    if((confirmed == Qnil) || (confirmed == Qfalse)){
+    VALUE opts;
+    VALUE block;
 
-        rb_iv_set(self, "@confirmed", Qfalse);
+    rb_scan_args(argc, argv, ":&", &opts, &block);
+
+    if(opts == Qnil){
+        opts = rb_hash_new();
+    }
+
+    rb_iv_set(self, "@responseHandler", Qnil);
+
+    VALUE confirmed = rb_hash_aref(opts, ID2SYM(rb_intern("confirmed")));
+    VALUE breakOnError = rb_hash_aref(opts, ID2SYM(rb_intern("breakOnError")));
+
+    if((confirmed == Qnil) || (confirmed == Qtrue)){
+
+        rb_iv_set(self, "@confirmed", Qtrue);
     }
     else{
 
-        rb_iv_set(self, "@confirmed", Qtrue);
+        rb_iv_set(self, "@confirmed", Qfalse);
     }
 
     if((breakOnError == Qnil) || (breakOnError == Qfalse)){
@@ -116,7 +127,7 @@ static VALUE clientInitialize(VALUE self, VALUE confirmed, VALUE breakOnError, V
 
     if(block != Qnil){
 
-        rb_funcall(self, rb_intern("instance_exec"), 1, block);
+        rb_funcall_with_block(self, rb_intern("instance_exec"), 0, NULL, block);
     }
     else{
 
@@ -173,20 +184,22 @@ static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const 
 
     VALUE receiver = rb_iv_get(self, "@receiver");
     VALUE handler = rb_iv_get(self, "@responseHandler");
-    VALUE args[] = {self, resList};
+    VALUE args[] = {resList};
 
-    if(receiver != Qnil){
+    if(handler != Qnil){
+        
+        if(receiver != Qnil){
 
-        rb_funcall_with_block(receiver, rb_intern("instance_exec"), sizeof(args)/sizeof(*args), args, handler);
-    }
-    else{
+            rb_funcall_with_block(receiver, rb_intern("instance_exec"), sizeof(args)/sizeof(*args), args, handler);
+        }
+        else{
 
-        rb_funcall(handler, rb_intern("call"), 2, self, resList);            
+            rb_funcall(handler, rb_intern("call"), 1, resList);            
+        }
     }
 }
 
-
-static VALUE clientInput(VALUE self, VALUE msg)
+static VALUE clientInput(VALUE self, VALUE expectedCounter, VALUE msg)
 {
     struct pr6_client *r;
 
@@ -197,37 +210,36 @@ static VALUE clientInput(VALUE self, VALUE msg)
 
     initClientState(r, rb_iv_get(self, "@confirmed"), rb_iv_get(self, "@breakOnError"), rb_iv_get(self, "@methods"));
 
+    expectedCounter = rb_funcall(expectedCounter, rb_intern("to_i"), 0);
+
     const uint8_t *in = (const uint8_t *)RSTRING_PTR(msg);
     uint32_t inLen = RSTRING_LEN(msg);
 
-    if(rb_iv_get(self, "@counter") == Qnil){
-
-        PR6_ClientInput(r, NUM2UINT(rb_iv_get(self, "@counter")), in, inLen);
-    }
-    else{
-
-        rb_raise(rb_eException, "no counter has been registered with this client");
-    }
-        
+    PR6_ClientInput(r, (uint16_t)NUM2UINT(expectedCounter), in, inLen);
+    
     return self;
 }
 
-static VALUE clientOutput(VALUE self, VALUE outMax)
+static VALUE clientOutput(int argc, VALUE* argv, VALUE self)
 {
+    VALUE outMax;
     struct pr6_client *r;
-    uint16_t _outMax;
+    uint16_t _outMax = 0xffff;
+
+    rb_scan_args(argc, argv, "01", &outMax);
+
+    if(outMax != Qnil){
+
+        outMax = rb_funcall(outMax, rb_intern("to_i"), 0);
+        
+        if((NUM2UINT(outMax) < 0xffff) && (NUM2UINT(outMax) > 0)){
+
+            _outMax = NUM2UINT(outMax);
+        }
+    }
     
-    if(NUM2UINT(outMax) > 0xffff){
-
-        _outMax = 0xffff;
-    }
-    else{
-
-        _outMax = NUM2UINT(outMax);
-    }
-
     uint8_t *out = ALLOC_N(uint8_t, _outMax);
-    
+
     struct state_wrapper *wrapper;
     Data_Get_Struct(self, struct state_wrapper, wrapper);
     r = &wrapper->state.client;
@@ -283,16 +295,4 @@ static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOn
             }
         }
     }
-}
-
-static VALUE setCounter(VALUE self, VALUE counter)
-{
-    VALUE input = rb_funcall(counter, rb_intern("to_i"), 0);
-    rb_iv_set(self, "@counter", UINT2NUM(NUM2UINT(input) & 0xffff));
-    return self;
-}
-
-static VALUE getCounter(VALUE self)
-{
-    return rb_iv_get(self, "@counter");
 }
