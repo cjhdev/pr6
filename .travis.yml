@@ -1,6 +1,6 @@
 notifications:
     email: false
-language: C  
+language: Ruby  
 script:
     - cd build/unit_test
     - make
