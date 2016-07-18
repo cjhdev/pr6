@@ -17,45 +17,46 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-
-require 'wrangle/constants'
+require 'wrangle/ext_wrangle'
+require 'wrangle/method_request'
+require 'wrangle/method_response'
 
 module Wrangle
 
-    class MethodRequest
+    class Client
 
-        # @param objectID [Integer]
-        # @param methodIndex [Integer]
-        # @param argument [String]
-        def initialize(objectID, methodIndex, argument)
+        # @!method initialize( confirmed, breakOnError, reciever, &block)
+        #
+        # @param confirmed [true, false]
+        # @param breakOnError [true, false]
+        # @param receiver [Object,nil] evaluate responseHandler within context of this object
+        # @param block [Block] requests and response handler
+        #
+        
+        # @!method input(msg)
+        #
+        # Deliver message to client instance
+        #
+        # @param msg [String] message to deliver to client
+        #
 
-            if !Range.new(0, OBJECT_ID_MAX).include? objectID.to_i
-                raise ArgumentError
-            end
-            if !Range.new(0, METHOD_INDEX_MAX).include? methodIndex.to_i
-                raise ArgumentError
-            end
-            if !Range.new(0, 0xffff).include? argument.size
-                raise ArgumentError
-            end
-            
-            @objectID = objectID.to_i
-            @methodIndex = methodIndex.to_i
-            @argument = argument.to_s
+        # @!method output(outMax)
+        #
+        # Get message from client instance
+        #
+        # @param outMax [Integer]
+        # @returns [String] message
+        #
+        
+        # @!method uuid
+        #
+        # @return [String] uuid of this instance
 
-        end
-
-        # return [Integer]
-        attr_reader :objectID
-
-        # return [Integer]
-        attr_reader :methodIndex
-
-        # return [String]
-        attr_reader :argument
+        # @!method registerCounter(counter)
+        #
+        # @param counter [Integer]
 
     end
-
+    
 end
-
-
+    

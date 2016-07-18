@@ -185,7 +185,12 @@ module Wrangle
 
                     begin
 
-                        { :adapterResult => :PR6_ADAPTER_SUCCESS, :result => :PR6_RESULT_SUCCESS, :returnValue => self.instance_exec(argument, &@method[methodIndex][:handler]) }
+                        retval = self.instance_exec(argument, &@method[methodIndex][:handler])
+                        if retval.nil?
+                            retval = ""
+                        end
+
+                        { :adapterResult => :PR6_ADAPTER_SUCCESS, :result => :PR6_RESULT_SUCCESS, :returnValue => retval }
 
                     rescue MethodHandlerResult => ex
 
