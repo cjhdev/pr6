@@ -3,7 +3,6 @@
     Peer "1" *-- "0..n" Association
     Peer "0..n" o-- "0..n" Object
 
-    Association "1" o-- "0..1" "Security Module"
     Association "1" *-- "0..n" Client
     Association "1" *-- "0..n" Server
     
@@ -11,7 +10,6 @@
 
     Class ..|> Object
     
-
     class Peer {
 
         Entity Identifier
@@ -22,15 +20,9 @@
         Local Identifier
         Remote Identifier
         Assigned Role
-        Remote Receive Size
-    }
-
-    class "Security Module" {
-
-        Local Identifier
-        Remote Identifier
+        Remote Max
         Invocation Counter
-        Remote Invocation Counter Set
+        Remote Invocation Counter        
         Secret
 
         encrypt()
