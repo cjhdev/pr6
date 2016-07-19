@@ -35,7 +35,7 @@ static enum pr6_result symbolToResult(VALUE symbol);
 static enum pr6_adapter_result symbolToAdapterResult(VALUE symbol);
 static enum pr6_adapter_result serverObjectInterface(const struct pr6_server *r, struct pr6_server_adapter *arg, enum pr6_result *result);
 static uint8_t castAdapterResult(uint8_t in, enum pr6_adapter_result *out);
-static VALUE serverInitialise(VALUE self, VALUE association);
+static VALUE serverInitialise(VALUE self, VALUE association, VALUE objects);
 static VALUE association(VALUE self);
 
 /* local variables ****************************************************/
@@ -45,23 +45,22 @@ static VALUE association(VALUE self);
 
 void EXT_PR6_ServerInit(void)
 {
-    rb_require("wrangle/object_list"); 
-
     VALUE wrangle = rb_define_module("Wrangle");
     VALUE pr6Server = rb_define_class_under(wrangle, "Server", rb_cObject);
 
     rb_define_alloc_func(pr6Server, StateWrapperAlloc);
     
-    rb_define_method(pr6Server, "initialize", serverInitialise, 1);
+    rb_define_method(pr6Server, "initialize", serverInitialise, 2);
     rb_define_method(pr6Server, "input", serverInput, 2);    
     rb_define_method(pr6Server, "association", association, 0);    
 }
 
 /* internal functions *************************************************/
 
-static VALUE serverInitialise(VALUE self, VALUE association)
+static VALUE serverInitialise(VALUE self, VALUE association, VALUE objects)
 {
     rb_iv_set(self, "@association", association);
+    rb_iv_set(self, "@objects", objects);
 
     return self;
 }
@@ -167,8 +166,8 @@ static enum pr6_adapter_result serverObjectInterface(const struct pr6_server *r,
     enum pr6_adapter_result retval = PR6_ADAPTER_SUCCESS;    
     VALUE self = SelfFromWrapper(r);
 
-    VALUE object = rb_funcall(rb_const_get(rb_define_module("Wrangle"), rb_intern("ObjectList")), rb_intern("getObject"), 1, UINT2NUM(arg->objectID));
-    
+    VALUE object = rb_hash_aref(rb_iv_get(self, "@objects"), UINT2NUM(arg->objectID));
+
     if(object != Qnil){
 
         VALUE callResult = rb_funcall(object, rb_intern("callMethod"), 3, self, UINT2NUM(arg->methodIndex), rb_str_new((const char *)arg->in, arg->inLen));

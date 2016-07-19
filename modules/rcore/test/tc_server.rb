@@ -48,10 +48,11 @@ class TestServer < Test::Unit::TestCase
                 argument 
             end            
         end
-    
-        ObjectList.clear
-        ObjectList.insert(myObj)        
-        @myServer = Server.new(MockAssociation.new([:public], 0))        
+
+        @objects = {}
+        @objects[myObj.objectID] = myObj
+
+        @myServer = Server.new(MockAssociation.new([:public], 0), @objects)        
 
     end
 
@@ -87,7 +88,7 @@ class TestServer < Test::Unit::TestCase
 
     def test_server_accessDenied
 
-        @myServer = Server.new(MockAssociation.new([:other], 0))   
+        @myServer = Server.new(MockAssociation.new([:other], 0), @objects)   
 
         input = "\x00\x00\x00\x00\x05hello".force_encoding("ASCII-8BIT")
         inputCounter = 1
