@@ -32,10 +32,10 @@ Sequel.migration do
             String :remoteInvocationCounter, :null=>false
             Integer :remoteInvocationCounterWindow, :null=>false
             primary_key([:entityID, :assocID], :name=>:association_pk)        
-        end        
+        end
     end
 
     down do
-        drop_table(:Assocations)
+        drop_table(:assocations)
     end
 end
