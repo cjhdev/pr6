@@ -12,17 +12,19 @@ module Wrangle
 
             @result = result
 
-            if !req.is_a? MethodRequest; raise ArgumentError end
-            if !PR6_RESULT.include? result; raise ArgumentError end
+            if !req.is_a? MethodRequest
+                raise ArgumentError
+            end
+            if !PR6_CLIENT_RESULT.include? result
+                raise ArgumentError
+            end
 
             @req = req
             @result = result
 
             if result == :PR6_RESULT_SUCCESS
 
-                if !returnValue.is_a? String; raise ArgumentError end
-
-                @returnValue = returnValue
+                @returnValue = returnValue.to_s
                 
             end
             

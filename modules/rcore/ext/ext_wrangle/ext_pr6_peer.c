@@ -100,8 +100,8 @@ static VALUE peerUnpackMessage(VALUE self, VALUE msg)
         retval = rb_hash_new();
 
         rb_hash_aset(retval, ID2SYM(rb_intern("data")), rb_str_new((const char *)out, outLen));
-        rb_hash_aset(retval, ID2SYM(rb_intern("localID")), rb_str_new((const char *)header.to, sizeof(header.to)));
-        rb_hash_aset(retval, ID2SYM(rb_intern("remoteID")), rb_str_new((const char *)header.from, sizeof(header.from)));
+        rb_hash_aset(retval, ID2SYM(rb_intern("to")), rb_str_new((const char *)header.to, sizeof(header.to)));
+        rb_hash_aset(retval, ID2SYM(rb_intern("from")), rb_str_new((const char *)header.from, sizeof(header.from)));
         rb_hash_aset(retval, ID2SYM(rb_intern("recipient")), oRecipient);
         rb_hash_aset(retval, ID2SYM(rb_intern("counter")), UINT2NUM(counter));
     }

@@ -17,32 +17,40 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
-require 'wrangle/ext_wrangle'
 
-module Wrangle
+require "test/unit"
+require "wrangle/peer"
+require 'logger'
 
-    class Server
+class TestPeer < Test::Unit::TestCase
 
-        # @!method initialize(association, objects)
-        #
-        # @param association [Association]
-        #
-        # @raise [ArgumentError]
-        #
+    include Wrangle
 
-        # @!method input(counter, input)
-        #
-        # Deliver message to server and receive a response
-        #
-        # @param msg [String] input message
-        # @return [String] output message
-        #
-        #
+    ENTITY_ID = "00-00-00-00-00-00-00-01"
+    LOCAL_ID = "00-00-00-00-00-00-00-01"
+    REMOTE_ID = "00-00-00-00-00-00-00-ff"
 
-        # @!method association
-        #
-        # @return [Association]
+    def test_setup
+
+        Sequel.extension :migration
+        #DB.association = Sequel.sqlite '', :loggers => [Logger.new($stdout)]
+        DB.association = Sequel.sqlite
+        #DB.association.sql_log_level = :debug
+        Sequel::Migrator.run(DB.association, "../../modules/rcore/db/migrations")
+
+        AssociationRecord.create(ENTITY_ID, LOCAL_ID, REMOTE_ID)
         
     end
-    
+
+    def test_init
+
+        Peer.new(ENTITY_ID, {})
+        
+    end
+
+    def test_input
+
+        
+    end
+
 end

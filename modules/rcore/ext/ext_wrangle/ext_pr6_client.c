@@ -15,7 +15,6 @@
 
 static VALUE ConstMethodRequest;
 static VALUE ConstMethodResponse;
-static VALUE ConstSecureRandom;
 static VALUE ConstClient;
 
 /* static function prototypes *****************************************/
@@ -24,11 +23,11 @@ static VALUE clientInitialize(int argc, VALUE* argv, VALUE self);
 static VALUE clientInput(VALUE self, VALUE expectedCounter, VALUE msg);
 static VALUE clientOutput(int argc, VALUE* argv, VALUE self);
 static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list);
-static VALUE resultToSymbol(enum pr6_result result);
+static VALUE resultToSymbol(enum pr6_client_result result);
 static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOnError, VALUE requests);
-static VALUE uuid(VALUE self);
 static VALUE responseHandler(int argc, VALUE* argv, VALUE self);
 static VALUE request(VALUE self, VALUE objectID, VALUE methodIndex, VALUE argument);
+static VALUE clientTimeout(VALUE self);
 
 /* functions **********************************************************/
 
@@ -39,29 +38,22 @@ void EXT_PR6_ClientInit(void)
 
     rb_define_method(ConstClient, "initialize", clientInitialize, -1);
     rb_define_method(ConstClient, "input", clientInput, 2);
-    rb_define_method(ConstClient, "output", clientOutput, -1);
-    rb_define_method(ConstClient, "uuid", uuid, 0);
+    rb_define_method(ConstClient, "output", clientOutput, -1);    
+    rb_define_method(ConstClient, "timeout", clientTimeout, 0);    
 
     rb_define_private_method(ConstClient, "request", request, 3);
     rb_define_private_method(ConstClient, "response", responseHandler, -1);
     
     rb_require("wrangle/method_response");
     rb_require("wrangle/method_request");
-    rb_require("securerandom");
-        
+    
     ConstMethodResponse = rb_const_get(wrangle, rb_intern("MethodResponse"));
     ConstMethodRequest = rb_const_get(wrangle, rb_intern("MethodRequest"));    
-    ConstSecureRandom = rb_const_get(rb_cObject, rb_intern("SecureRandom"));
-
+    
     rb_define_alloc_func(ConstClient, StateWrapperAlloc);   
 }
 
 /* static functions ***************************************************/
-
-static VALUE uuid(VALUE self)
-{
-    return rb_iv_get(self, "@uuid");
-}
 
 static VALUE request(VALUE self, VALUE objectID, VALUE methodIndex, VALUE argument)
 {
@@ -144,8 +136,6 @@ static VALUE clientInitialize(int argc, VALUE* argv, VALUE self)
         rb_raise(rb_eException, "must define a response handler");
     }
 
-    rb_iv_set(self, "@uuid", rb_funcall(ConstSecureRandom, rb_intern("uuid"), 0));
-
     return self;
 }
 
@@ -173,7 +163,7 @@ static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const 
         else{
 
             VALUE arg[] = {
-                rb_funcall(ConstMethodRequest, ID2SYM(rb_intern("new")), 3, UINT2NUM(list[i].objectID), UINT2NUM(list[i].methodIndex), rb_str_new((const char *)list[i].arg, list[i].argLen)),
+                rb_funcall(ConstMethodRequest, rb_intern("new"), 3, UINT2NUM(list[i].objectID), UINT2NUM(list[i].methodIndex), rb_str_new((const char *)list[i].arg, list[i].argLen)),
                 resultToSymbol(list[i].result),
                 Qnil                
             };
@@ -182,10 +172,14 @@ static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const 
         }
     }
 
+
+
     VALUE receiver = rb_iv_get(self, "@receiver");
     VALUE handler = rb_iv_get(self, "@responseHandler");
     VALUE args[] = {resList};
 
+    
+    
     if(handler != Qnil){
         
         if(receiver != Qnil){
@@ -250,13 +244,13 @@ static VALUE clientOutput(int argc, VALUE* argv, VALUE self)
     return rb_str_new((const char *)out, PR6_ClientOutput(r, out, _outMax));
 }
 
-static VALUE resultToSymbol(enum pr6_result result)
+static VALUE resultToSymbol(enum pr6_client_result result)
 {
-    VALUE sym = rb_ary_entry(rb_const_get(rb_define_module("Wrangle"), rb_intern("PR6_RESULT")), (int)result);
+    VALUE sym = rb_ary_entry(rb_const_get(rb_define_module("Wrangle"), rb_intern("PR6_CLIENT_RESULT")), (int)result);
 
     if(sym == Qnil){
 
-        rb_bug("PR6_RESULT is out of alignment with enum pr6_result");
+        rb_bug("PR6_RESULT is out of alignment with enum pr6_client_result");
     }
 
     return sym;
@@ -269,6 +263,7 @@ static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOn
 
     bool c = (confirmed == Qtrue) ? true : false;
     bool boe = (breakOnError == Qtrue) ? true : false;
+
     struct pr6_client_req_res *pool = ALLOC_N(struct pr6_client_req_res, poolMax);
     
     for(i=0; i < poolMax; i++){
@@ -295,4 +290,20 @@ static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOn
             }
         }
     }
+}
+
+static VALUE clientTimeout(VALUE self)
+{
+    struct pr6_client *r;
+
+    struct state_wrapper *wrapper;
+    Data_Get_Struct(self, struct state_wrapper, wrapper);
+    r = &wrapper->state.client;
+    assert(wrapper->self == self);
+
+    initClientState(r, rb_iv_get(self, "@confirmed"), rb_iv_get(self, "@breakOnError"), rb_iv_get(self, "@methods"));
+
+    PR6_ClientTimeout(r);
+
+    return self;
 }

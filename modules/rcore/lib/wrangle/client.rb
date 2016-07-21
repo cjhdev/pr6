@@ -25,12 +25,8 @@ module Wrangle
 
     class Client
 
-        # @!method initialize( confirmed, breakOnError, reciever, &block)
+        # @!method initialize(**opts, &block)
         #
-        # @param confirmed [true, false]
-        # @param breakOnError [true, false]
-        # @param receiver [Object,nil] evaluate responseHandler within context of this object
-        # @param block [Block] requests and response handler
         #
         
         # @!method input(msg)
@@ -47,10 +43,34 @@ module Wrangle
         # @param outMax [Integer]
         # @returns [String] message
         #
-        
-        # @!method uuid
-        #
-        # @return [String] uuid of this instance
+
+        def to_json
+            out = {
+                :confirmed => @confirmed,
+                :breakOnError => @breakOnError,
+                :methods => []
+            }
+
+            @methods.each do |m|
+                out[:methods] << {
+                    :objectID => m.objectID,
+                    :methodIndex => m.methodIndex,
+                    :argument => m.argument
+                }                
+            end
+
+            JSON.dump(out)
+        end
+
+        def self.from_json(input, receiver=nil, &responseHandler)
+            input = JSON.load(input)
+            Client.new(confirmed: input[:confirmed], breakOnError: input[:breakOnError]) do
+                input[:methods].each do |m|
+                    request(m[:objectID], m[:methodIndex], m[:argument])                                        
+                end
+                response(receiver, &responseHandler)
+            end
+        end
 
     end
     

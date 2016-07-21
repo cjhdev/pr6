@@ -103,6 +103,8 @@ class TestClient < Test::Unit::TestCase
             end            
         end
 
+        c.output(30)
+
         input = "\x04\x00\x01\x00\x00".force_encoding("ASCII-8BIT")
         c.input(1, input)
 
@@ -133,6 +135,23 @@ class TestClient < Test::Unit::TestCase
 
     end
 
-    
-    
+    def test_timeout
+
+        touch = 0
+
+        c = Client.new do
+            request 0, 0, "hello world"
+            response do |res|
+                touch = 1
+            end            
+        end
+
+        assert_equal(0, touch)
+
+        c.timeout
+
+        assert_equal(1, touch)
+
+    end
+
 end
