@@ -38,7 +38,6 @@ static uint8_t castResult(uint8_t in, enum pr6_client_result *out);
 static uint16_t getCounter(const uint8_t *in);
 static uint16_t getObjectID(const uint8_t *in);
 
-
 /* structure **********************************************************/
 
 /** Complete Response

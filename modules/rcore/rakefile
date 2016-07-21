@@ -1,4 +1,11 @@
 require 'rake/testtask'
+require 'rake/extensiontask'
+
+Rake::ExtensionTask.new  do |ext|
+    ext.name = "ext_wrangle"
+    ext.ext_dir = "ext/wrangle/ext_wrangle"
+    ext.lib_dir = "lib/wrangle"
+end
 
 Rake::TestTask.new do |t|
     

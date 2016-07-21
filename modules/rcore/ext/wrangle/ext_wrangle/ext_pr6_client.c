@@ -145,6 +145,7 @@ static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const 
 
     VALUE self = SelfFromWrapper(r);
     VALUE resList = rb_ary_new();
+    VALUE methods = rb_iv_get(self, "@methods");
 
     assert(self != Qnil);
     
@@ -153,7 +154,7 @@ static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const 
         if(list[i].result == PR6_CLIENT_RESULT_SUCCESS){
 
             VALUE arg[] = {
-                rb_funcall(ConstMethodRequest, rb_intern("new"), 3, UINT2NUM(list[i].objectID), UINT2NUM(list[i].methodIndex), rb_str_new((const char *)list[i].arg, list[i].argLen)),
+                rb_ary_entry(methods, i),
                 resultToSymbol(list[i].result),
                 rb_str_new((const char *)list[i].returnValue, list[i].returnValueLen)
             };
@@ -163,22 +164,18 @@ static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const 
         else{
 
             VALUE arg[] = {
-                rb_funcall(ConstMethodRequest, rb_intern("new"), 3, UINT2NUM(list[i].objectID), UINT2NUM(list[i].methodIndex), rb_str_new((const char *)list[i].arg, list[i].argLen)),
-                resultToSymbol(list[i].result),
-                Qnil                
+                rb_ary_entry(methods, i),
+                resultToSymbol(list[i].result)
             };
         
             rb_ary_push(resList, rb_class_new_instance(sizeof(arg)/sizeof(VALUE), arg, ConstMethodResponse));
         }
     }
 
-
-
     VALUE receiver = rb_iv_get(self, "@receiver");
     VALUE handler = rb_iv_get(self, "@responseHandler");
     VALUE args[] = {resList};
 
-    
     
     if(handler != Qnil){
         
@@ -188,7 +185,7 @@ static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const 
         }
         else{
 
-            rb_funcall(handler, rb_intern("call"), 1, resList);            
+            rb_funcallv(handler, rb_intern("call"), sizeof(args)/sizeof(*args), args);            
         }
     }
 }

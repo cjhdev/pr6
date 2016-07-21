@@ -139,10 +139,29 @@ class TestClient < Test::Unit::TestCase
 
         touch = 0
 
+        thisTest = self
+
         c = Client.new do
-            request 0, 0, "hello world"
-            response do |res|
+            request 0, 1, "hello world"
+            request 2, 3, "hello world"
+            response(thisTest) do |res|
+
                 touch = 1
+                
+                assert_equal(2, res.size)
+
+                assert_equal(0, res.first.objectID)
+                assert_equal(1, res.first.methodIndex)
+                assert_equal("hello world", res.first.argument)
+                assert_equal(:PR6_CLIENT_RESULT_TIMEOUT, res.first.result)
+                assert_equal(nil, res.first.returnValue)
+                
+                assert_equal(2, res.last.objectID)
+                assert_equal(3, res.last.methodIndex)
+                assert_equal("hello world", res.last.argument)
+                assert_equal(:PR6_CLIENT_RESULT_TIMEOUT, res.last.result)
+                assert_equal(nil, res.last.returnValue)
+                
             end            
         end
 

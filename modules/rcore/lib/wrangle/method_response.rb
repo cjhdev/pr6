@@ -25,9 +25,23 @@ module Wrangle
             if result == :PR6_RESULT_SUCCESS
 
                 @returnValue = returnValue.to_s
+
+            else
+
+                @returnValue = nil
                 
             end
             
+        end
+
+        def objectID
+            @req.objectID
+        end
+        def methodIndex
+            @req.methodIndex
+        end
+        def argument
+            @req.argument
         end
 
         # @return [MethodRequest] request this response answers

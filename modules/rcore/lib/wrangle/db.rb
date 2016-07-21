@@ -23,7 +23,7 @@ module Wrangle
     class DB
 
         @association = nil
-
+        
         def self.association=(db)
             @association = db
         end

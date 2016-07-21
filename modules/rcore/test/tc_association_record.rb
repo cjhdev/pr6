@@ -29,8 +29,9 @@ class TestAssociationRecord < Test::Unit::TestCase
 
     def setup
         Sequel.extension :migration
-        DB.association = Sequel.sqlite '', :loggers => [Logger.new($stdout)]
-        DB.association.sql_log_level = :debug
+        #DB.association = Sequel.sqlite '', :loggers => [Logger.new($stdout)]
+        DB.association = Sequel.sqlite
+        #DB.association.sql_log_level = :debug
         Sequel::Migrator.run(DB.association, "../../modules/rcore/db/migrations")    
     end
 
