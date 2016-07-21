@@ -37,7 +37,7 @@ task :test_with_deps => :stage do
 end
 
 desc "package gem"
-task :package => :compile do
+task :package => :stage do
 
     system "cd #{STAGE_DIR} && gem build wrangle.gemspec"
 
