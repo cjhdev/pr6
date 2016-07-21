@@ -10,4 +10,6 @@ script:
     - make
     - make coverage
     - cd ../wrangle
-    - rake test
+    - rake stage
+    - cd ..
+    - rake test_with_deps    

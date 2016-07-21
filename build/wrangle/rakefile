@@ -33,7 +33,16 @@ end
 desc "run all unit tests"
 task :test => :compile do
 
-    system "cd #{STAGE_DIR} && rake test    "
+    system "cd #{STAGE_DIR} && rake test"
+
+end
+
+# hmm not sure about this at all
+desc "run all unit tests with vendored dependencies"
+task :test_with_deps => :compile do
+
+    system "cd #{STAGE_DIR} && bundle install"
+    system "cd #{STAGE_DIR} && rake test"
 
 end
 
