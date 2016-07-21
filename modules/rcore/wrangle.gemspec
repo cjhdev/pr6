@@ -13,5 +13,7 @@ spec = Gem::Specification.new do |s|
     s.add_runtime_dependency 'sequel'
     s.add_runtime_dependency 'sqlite3'
     s.add_development_dependency 'rake-compiler'
+    s.add_development_dependency 'rake'
+    s.add_development_dependency 'test-unit'
     s.required_ruby_version = '>= 2.3'
 end
