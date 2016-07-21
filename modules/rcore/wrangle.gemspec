@@ -13,4 +13,6 @@ spec = Gem::Specification.new do |s|
     s.license = 'MIT'
     s.test_files = Dir.glob("test/**/*.rb")
     s.has_rdoc = 'yard'
+    s.add_runtime_dependency 'sequel'
+    s.add_runtime_dependency 'sqlite3'
 end
