@@ -116,11 +116,15 @@ module Wrangle
                
         end
 
-        # @param messageHash [Hash]
-        def input(message)
+        def input(message, **opts)
 
             if @processMessageQueue.size < @maxProcessMessageQueue
-                @processMessageQueue.push({:type => :receive, :messageHash => messageHash})
+                @processMessageQueue.push({
+                    :type => :receive,
+                    :ip => opts[:ip],
+                    :port => opts[:port],
+                    :message => message
+                })
             else
                 STDERR.puts "dropping input"
             end
@@ -210,7 +214,9 @@ module Wrangle
                             :id=>job.id,
                             :to=>job.remoteID,
                             :from=>job.localID, 
-                            :message=>job.sendMessage
+                            :message=>job.sendMessage,
+                            :ip => job.ip,
+                            :port => job.port
                         })
 
                     else
@@ -235,14 +241,16 @@ module Wrangle
                         to = message[:to]
                         from = message[:from]
                         
-                        output = packMessage(from, to, message[:message])
+                        output = packMessage(from, to, message[:data])
 
                         if output
                     
-                            @outputQueue.push({
-                                :data => output[:data],
+                            @outputQueue.push({                                
                                 :to => to,
                                 :from => from,
+                                :message => output[:data],
+                                :ip => input[:ip],
+                                :port => input[:port]
                             })
 
                             @processJobQueue.push({
@@ -271,7 +279,7 @@ module Wrangle
                                     :type => :processMessage,
                                     :from => result[:from],
                                     :to => result[:to],
-                                    :message => counter
+                                    :message => result[:data]                                    
                                 })
 
                             when :server
@@ -287,7 +295,9 @@ module Wrangle
                                         @output.push({
                                             :to => result[:from],
                                             :from => result[:to],
-                                            :data => output
+                                            :ip => input[:ip],
+                                            :port => input[:port],
+                                            :message => output[:data]
                                         })
 
                                     end

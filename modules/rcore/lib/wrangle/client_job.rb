@@ -32,6 +32,8 @@ module Wrangle
         attr_reader :localID
         attr_reader :assocID
         attr_reader :timeout
+        attr_reader :port
+        attr_reader :ip
 
         DEFAULT_RETRY_MAX = 0
         DEFAULT_RETRY_PERIOD = 0
@@ -66,10 +68,13 @@ module Wrangle
                     request(m[:objectID], m[:methodIndex], m[:argument])
                 end
                 response(self) do |result|
-                    puts "hello world"
+                    
                 end
             end
-            
+
+            @ip = opts[:ip]
+            @port = opts[:port]
+
         end
 
         def sendMessage(maxOut)
