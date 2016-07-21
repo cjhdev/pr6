@@ -15,4 +15,5 @@ spec = Gem::Specification.new do |s|
     s.has_rdoc = 'yard'
     s.add_runtime_dependency 'sequel'
     s.add_runtime_dependency 'sqlite3'
+    s.add_development_dependency 'rake-compiler'
 end

@@ -2,8 +2,8 @@ notifications:
     email: false
 language: Ruby
 rvm:
-  - 2.0
-  - 2.1
+#  - 2.0
+#  - 2.1
   - 2.2  
 script:
     - cd build/unit_test
@@ -12,4 +12,4 @@ script:
     - cd ../wrangle
     - rake stage
     - cd ..
-    - rake test_with_deps    
+    - rake test_with_deps 
