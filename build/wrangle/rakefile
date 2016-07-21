@@ -18,16 +18,13 @@ task :stage do
     system "cp -vr #{DIR_ROOT}/modules/core/src/*                   #{STAGE_EXT_DIR}"
     system "cp -vr #{DIR_ROOT}/modules/core/include/*               #{STAGE_EXT_DIR}"
     system "cp -vr #{DIR_ROOT}/modules/debug_interface/include/*    #{STAGE_EXT_DIR}"
-
-    
-    
+ 
 end
 
 desc "run all unit tests"
 task :test => :stage do
 
-    system "cd #{STAGE_DIR} && rake compile"
-    system "cd #{STAGE_DIR} && rake test"
+    system "cd #{STAGE_DIR} && rake compile && rake test"
 
 end
 
@@ -35,14 +32,15 @@ end
 desc "run all unit tests with vendored dependencies"
 task :test_with_deps => :stage do
 
-    system "cd #{STAGE_DIR} && bundle install"
-    system "cd #{STAGE_DIR} && rake test"
+    system "cd #{STAGE_DIR} && bundle install && rake compile && rake test"
 
 end
 
 desc "package gem"
 task :package => :compile do
+
     system "cd #{STAGE_DIR} && gem build wrangle.gemspec"
+
 end
 
 task :default => :test
