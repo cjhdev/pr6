@@ -1,14 +1,13 @@
 notifications:
     email: false
-language: Ruby  
+language: Ruby
+rvm:
+  - 2.0
+  - 2.1
+  - 2.2  
 script:
     - cd build/unit_test
     - make
     - make coverage
-#    - cd ../wrangle
-#    - rake clean
-#    - rake compile
-#    - rake package
-#    - cd gem
-#    - bundle install
-#    - rake
+    - cd ../wrangle
+    - rake test
