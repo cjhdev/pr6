@@ -44,31 +44,15 @@ module Wrangle
         # @returns [String] message
         #
 
-        def to_json
-            out = {
-                :confirmed => @confirmed,
-                :breakOnError => @breakOnError,
-                :methods => []
-            }
-
-            @methods.each do |m|
-                out[:methods] << {
-                    :objectID => m.objectID,
-                    :methodIndex => m.methodIndex,
-                    :argument => m.argument
-                }                
+        def cancel
+            res = []
+            @methods.each do |req|
+                res.push(MethodResponse(req, PR6_CLIENT_RESULT_CANCELLED))
             end
-
-            JSON.dump(out)
-        end
-
-        def self.from_json(input, receiver=nil, &responseHandler)
-            input = JSON.load(input)
-            Client.new(confirmed: input[:confirmed], breakOnError: input[:breakOnError]) do
-                input[:methods].each do |m|
-                    request(m[:objectID], m[:methodIndex], m[:argument])                                        
-                end
-                response(receiver, &responseHandler)
+            if @reciever
+                @reciever.instance_exec(res, &@handler)
+            else
+                self.instance_exec(res, &@handler)
             end
         end
 

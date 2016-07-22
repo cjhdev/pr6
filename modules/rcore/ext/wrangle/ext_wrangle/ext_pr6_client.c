@@ -28,6 +28,7 @@ static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOn
 static VALUE responseHandler(int argc, VALUE* argv, VALUE self);
 static VALUE request(VALUE self, VALUE objectID, VALUE methodIndex, VALUE argument);
 static VALUE clientTimeout(VALUE self);
+static VALUE clientPeekCounter(VALUE self, VALUE msg);
 
 /* functions **********************************************************/
 
@@ -43,6 +44,8 @@ void EXT_PR6_ClientInit(void)
 
     rb_define_private_method(ConstClient, "request", request, 3);
     rb_define_private_method(ConstClient, "response", responseHandler, -1);
+
+    rb_define_module_function(ConstClient, "peekCounter", clientPeekCounter, 1);
     
     rb_require("wrangle/method_response");
     rb_require("wrangle/method_request");
@@ -304,3 +307,17 @@ static VALUE clientTimeout(VALUE self)
 
     return self;
 }
+
+static VALUE clientPeekCounter(VALUE self, VALUE msg)
+{
+    VALUE retval = Qnil;
+    uint16_t counter;
+    msg = rb_funcall(msg, rb_intern("to_s"), 0);
+    
+    if(PR6_ClientPeekCounter((const uint8_t *)RSTRING_PTR(msg), RSTRING_LEN(msg), &counter) > 0U){
+        retval = UINT2NUM(counter);
+    }
+
+    return retval;
+}
+    

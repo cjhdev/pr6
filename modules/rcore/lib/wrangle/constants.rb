@@ -45,7 +45,8 @@ module Wrangle
         :PR6_CLIENT_RESULT_PERMANENT,
         :PR6_CLIENT_RESULT_TEMPORARY,
         :PR6_CLIENT_RESULT_MISSING,
-        :PR6_CLIENT_RESULT_TIMEOUT
+        :PR6_CLIENT_RESULT_TIMEOUT,
+        :PR6_CLIENT_RESULT_CANCELLED
     ]
 
     # aligns with enum pr6_adapter_result

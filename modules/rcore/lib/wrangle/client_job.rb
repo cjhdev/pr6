@@ -34,16 +34,16 @@ module Wrangle
         attr_reader :timeout
         attr_reader :port
         attr_reader :ip
-
+        attr_reader :response
+        
         DEFAULT_RETRY_MAX = 0
         DEFAULT_RETRY_PERIOD = 0
                 
-        def initialize(localID, remoteID, requests, caller, **opts)
+        def initialize(localID, remoteID, requests, **opts)
 
             time = Time.now
 
             @id = SecureRandom.uuid
-            @caller = caller
 
             @assocID = EUI64.pair(localID, remoteID).to_s
             @localID = EUI64.new(localID).to_s
@@ -68,17 +68,22 @@ module Wrangle
                     request(m[:objectID], m[:methodIndex], m[:argument])
                 end
                 response(self) do |result|
-                    
+                    @response.push(result)
                 end
             end
 
             @ip = opts[:ip]
             @port = opts[:port]
 
+            @response = Queue.new
+            @counter = nil
+
         end
 
         def sendMessage(maxOut)
-            @client.output(maxOut)            
+            @client.output(maxOut)
+            @timeout = nil
+            @counter = nil
         end
 
         def receiveMessage(message)
@@ -89,18 +94,40 @@ module Wrangle
             end
         end
 
+        def doTimeout
+            @client.timeout
+        end
+
+        def doCancel
+            @client.cancel
+        end
+
         def registerSent(counter, time)
-            @expectedCounter = counter & 0xffff
-            if @retryBackoff
-                @timeout = time + ( @retryPeriod << @retryCount )
-            else
-                @timeout = time + @retryPeriod
+            if @counter.nil?
+                @expectedCounter = counter & 0xffff
+                if @retryBackoff
+                    @timeout = time + ( @retryPeriod << @retryCount )
+                else
+                    @timeout = time + @retryPeriod
+                end
+                @status = :active
             end
-            @status = :active
         end
 
         def active?
             @status == :active
+        end
+
+        def counterMatch?(counter)
+            if @counter
+                @counter == counter
+            else
+                false
+            end
+        end
+
+        def retry?
+            @retryCount < @retryMax                
         end
 
     end

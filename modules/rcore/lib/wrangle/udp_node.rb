@@ -24,19 +24,13 @@ module Wrangle
 
     class UDPNode
 
-        def initialize(entityID, port)
+        def initialize(entityID, objects, port)
+
+            @pending = []
             
-            @socket = UDPSocket.new
+            @socket = UDPSocket.new.bind("0.0.0.0", port)
 
-            if @socket.nil?
-                raise Exception "cannot open socket"
-            end
-
-            @socket.bind("0.0.0.0", port)
-
-            @peer = Peer.new(entityID)
-
-            @peer.start
+            @peer = Peer.new(entityID, objects).start
 
             @threadPool = []
 
@@ -58,13 +52,18 @@ module Wrangle
                 loop do
 
                     input = @peer.output
-
                     @socket.send(input[:message], input[:ip], input[:port])
     
                 end
 
             end
 
+        end
+
+        def request(remoteID, requests, **opts)
+
+            @peer.request(remoteID, requests, **opts).pop
+            
         end
 
     end

@@ -56,8 +56,11 @@ module Wrangle
             @processMessageQueue = Queue.new
             @processJobQueue = Queue.new
             @outputQueue = Queue.new
-            
-            @jobs = []
+
+            @ids = []
+            @jobs = {}
+            @preJobs = {}
+            @timeoutList = []
 
             @maxProcessMessageQueue = DEFAULT_MAX_INPUT
             
@@ -82,6 +85,8 @@ module Wrangle
 
             end
 
+            self
+
         end
 
         # stop threads and cancel jobs
@@ -97,25 +102,36 @@ module Wrangle
 
             @running = false
 
+            @jobs.each do |j|
+                j.signalCancel                
+            end
+
+            @jobs = []
+            @preJobs = {}
+            @messageIndex = {}
+
         end
 
         # make a request
-        def request(remoteID, requests, caller, **opts)
+        def request(remoteID, requests, **opts)
+
+            # raise any exceptions now
+            ClientJob.new(@entityID, remoteID, requests, opts)
+            responseQueue = Queue.new
             
-            job = ClientJob.new(@entityID, remoteID, requests, caller, opts)
+            @processJobQueue.push({
+                :type=>:newJob,
+                :remoteID=>remoteID,
+                :requests=>requests,
+                :response=>responseQueue,
+                :opts=>opts                
+            })
 
-            if job
-
-                @processJobQueue.push({:type=>:newJob,:job=>job})
-                
-            else
-
-                raise "todo callback to caller"
-
-            end
-               
+            responseQueue
+   
         end
 
+        # deliver message to Peer
         def input(message, **opts)
 
             if @processMessageQueue.size < @maxProcessMessageQueue
@@ -126,37 +142,37 @@ module Wrangle
                     :message => message
                 })
             else
-                STDERR.puts "dropping input"
+                STDERR.puts "@processMessageQueue is full: dropping input"
             end
 
             self
 
         end
 
+        # get output message from Peer
         # @param non_block [true,false] if true, poll queue
-        # @return [Hash]
         def output(non_block=false)
-
-            @outputQueue.pop(non_block)
-            
+            @outputQueue.pop(non_block)            
         end
 
-        # @!method unpackMessage(msg)
-        #
-        # @param entityID [String] EUI64
-        # @param msg [String]
-        # @return [String, String, String, Symbol, Integer] payload, localID, remoteID, recipient, counter
-        # @return [nil]
-
-        # @!method packMessage(msg)
-        #
-        # @param remoteID [String] EUI64
-        # @param msg [String]
-        # @return [Hash]
-        # @return [nil]
 
         ################################################################
         private
+
+            # @!method unpackMessage(msg)
+            #
+            # @param entityID [String] EUI64
+            # @param msg [String]
+            # @return [String, String, String, Symbol, Integer] payload, localID, remoteID, recipient, counter
+            # @return [nil]
+
+            # @!method packMessage(msg)
+            #
+            # @param remoteID [String] EUI64
+            # @param msg [String]
+            # @return [Hash]
+            # @return [nil]
+
 
             # periodically notify the processJobThread to handle timeouts
             def processTick
@@ -170,7 +186,8 @@ module Wrangle
                 
             end
 
-            # handle jobs
+            # process jobs
+            # this thread "owns" @jobs
             def processJob
 
                 loop do
@@ -180,47 +197,184 @@ module Wrangle
                     time = Time.now
 
                     case input[:type]
-                    when :notifySend
+                    # notify job that message was not sent
+                    when :notifyNotSent
+
+                        id = input[:id]
+                        sendTime = input[:time]
+
+                        preJob = @preJobs[id]
+
+                        if preJob.nil?
+                            raise "missing preJob"
+                        end
+
+                        # remove from pre-job list
+                        @preJobs.delete(id)
+
+                        # notify application of failure
+                        preJob.doCancel
+
+                        # remove id from list
+                        @ids.delete(preJob.id)
+
+                        STDERR.puts "failed to send job #{preJob.id} at #{sendTime}"
+                        
+                    # notify job that message has been sent
+                    when :notifySent
 
                         id = input[:id]
                         counter = input[:counter]
                         sendTime = input[:time]
-                        
-                        job = @jobs.detect do |j|
-                            j.id == id
-                        end
-                        
-                        if job
-                            job.registerSent(sendTime, counter)
+
+                        preJob = @preJobs[id]
+
+                        if preJob.nil?
+                            raise "missing preJob"
                         end
 
+                        # register the send
+                        preJob.registerSent(sendTime, counter)
+
+                        # remove from pre-job list
+                        @preJobs.delete(id)
+
+                        # this is how jobs are indexed in @job list
+                        index = "#{preJob.assocID}-#{preJob.counter}"
+
+                        # this should be exceedingly rare - delete both jobs to resolve ambiguity
+                        # todo: explain exactly what this situation is
+                        if @jobs[index]
+
+                            collision = @jobs[index]
+                            
+                            # remove collision from @jobs list
+                            @jobs.delete(index)
+                            
+                            # notify application that both jobs are cancelled
+                            collision.doCancel
+                            preJob.doCancel
+                            
+                            # remove the ids from @ids list
+                            @ids.delete(collision.id)
+                            @ids.delete(preJob.id)
+
+                        else
+
+                            # add new job to the active jobs list
+                            @jobs[index] = preJob
+                            
+                            # insert new job into @timeouts by order of timeout
+                            if @timeouts.size > 0
+                                @timeouts.each_with_index do |j, i|
+                                    if j.timeout > preJob.timeout
+                                        @timeouts.insert(i, preJob)
+                                        break
+                                    end
+                                end
+                            else
+                                @timeouts << preJob
+                            end
+                            
+                        end                           
+
+                    # notify this thread to check for timeouts
                     when :notifyTick
                         
-                        STDERR.puts "tick-tock"
+                        # detect timeouts
+                        @timeouts.each do |j|
+                            if j.timeout <= time
 
+                                # remove from timeout list and jobs
+                                @timeouts.delete(j)
+                                @jobs.delete("#{j.id}-#{j.counter}")
+
+                                # try again?
+                                if j.retry?
+
+                                    # place in prejobs until confirmed as sent
+                                    @preJobs[j.id] = j
+
+                                    # delegate sending
+                                    @processMessageQueue.push({
+                                        :type=>:send,
+                                        :id=>j.id,
+                                        :to=>j.remoteID,
+                                        :from=>j.localID, 
+                                        :message=>j.sendMessage,
+                                        :ip =>j.ip,
+                                        :port=>j.port
+                                    })
+
+                                # shut it down
+                                else
+                                    j.doTimeout
+                                    @ids.delete(j.id)
+                                end
+                                
+                            else
+                                break
+                            end
+                        end
+
+                    # give an inbound message to a client job
                     when :processMessage
 
-                        STDERR.puts "got message"
+                        to = input[:to]
+                        from = input[:from]
+                        message = input[:message]
 
+                        assocID = EUI64.pair(to, from)
+                        counter = Client.peekCounter(message)
 
+                        index = "#{assocID}-#{counter}"
+
+                        job = @jobs[index]
+
+                        if job and job.receiveMessage(message).finished?
+
+                            # remove from timeout list and jobs
+                            @timeouts.delete(j)
+                            @jobs.delete(index)
+                            
+                        end
+                            
+                    # insert a new job into the queue
                     when :newJob
 
-                        job = input[:job]
+                        preJob = nil
 
-                        @jobs << job
+                        # however unlikely, ensure the same id doesn't occur twice
+                        begin
+                        
+                            preJob = ClientJob.new(
+                                @entityID,
+                                input[:remoteID],
+                                input[:requests],
+                                input[:opts]
+                            )
 
+                        end while @ids.include? preJob.id
+
+                        # make a note of the id
+                        @ids << preJob.id
+
+                        # place in prejobs until confirmed as sent
+                        @preJobs[preJob.id] = preJob
+
+                        # delegate sending
                         @processMessageQueue.push({
                             :type=>:send,
-                            :id=>job.id,
-                            :to=>job.remoteID,
-                            :from=>job.localID, 
-                            :message=>job.sendMessage,
-                            :ip => job.ip,
+                            :id=>preJob.id,
+                            :to=>preJob.remoteID,
+                            :from=>preJob.localID, 
+                            :message=>preJob.sendMessage,
+                            :ip => preJob.ip,
                             :port => job.port
                         })
 
                     else
-                        raise
+                        raise "unknow message type"
                     end
                                             
                 end
@@ -254,7 +408,7 @@ module Wrangle
                             })
 
                             @processJobQueue.push({
-                                :type=>:notifySend,
+                                :type=>:notifySent,
                                 :id=>id,
                                 :time => Time.now,
                                 :counter => output[:counter]
@@ -262,7 +416,11 @@ module Wrangle
 
                         else
 
-                            STDERR.puts "could not send"
+                            @processJobQueue.push({
+                                :type=>:notifyNotSent,
+                                :id=>id,
+                                :time => Time.now
+                            })
 
                         end
 
@@ -288,7 +446,7 @@ module Wrangle
 
                                 if association
 
-                                    output = PackMessage(result[:to], Server.new(association).input(result[:counter], result[:data]).output)
+                                    output = PackMessage(result[:to], Server.new(association, @objects).input(result[:counter], result[:data]).output)
                                             
                                     if output.size > 0
 
@@ -313,9 +471,7 @@ module Wrangle
                         end
 
                     else
-
-                        STDERR.puts "dropping message: no association for #{messageHash[:to]}:#{messageHash[:from]}"
-
+                        raise "unknown message type"
                     end
 
                 end
