@@ -38,6 +38,9 @@ module Wrangle
             @remoteInvocationCounterWindow = 1
             @invocationCounter = 0
             @remoteInvocationCounter = Set.new
+            if @localID == @remoteID
+                raise "cannot have an association with yourself"
+            end
             if opts[:remoteMax]
                 self.remoteMax = opts[:remoteMax]
             end

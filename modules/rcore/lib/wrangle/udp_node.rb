@@ -24,13 +24,12 @@ module Wrangle
 
     class UDPNode
 
-        def initialize(entityID, objects, port)
+        def initialize(entityID, **opts)
 
-            @pending = []
-            
-            @socket = UDPSocket.new.bind("0.0.0.0", port)
+            @port = opts[:port]||0            
+            @socket = UDPSocket.new.bind("0.0.0.0", @port)
 
-            @peer = Peer.new(entityID, objects).start
+            @peer = Peer.new(entityID, objectList: opts[:objectList]).start
 
             @threadPool = []
 
@@ -60,9 +59,9 @@ module Wrangle
 
         end
 
-        def request(remoteID, requests, **opts)
+        def request(remoteID, **opts, &requests)
 
-            @peer.request(remoteID, requests, **opts).pop
+            @peer.request(remoteID, **opts, &requests).pop
             
         end
 

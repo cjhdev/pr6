@@ -31,9 +31,9 @@ class TestClientJob < Test::Unit::TestCase
 
     def test_init
 
-        c = ClientJob.new(LOCAL_ID, REMOTE_ID, [{:objectID=>0,:methodID=>0,:argument=>"hello world"}], nil)
-
-        assert_equal(false, c.active?)
+        c = ClientJob.new(LOCAL_ID, REMOTE_ID, Queue.new) do
+            request(0,0,"hello world")
+        end
 
         assert_equal(LOCAL_ID, c.localID)
         assert_equal(REMOTE_ID, c.remoteID)
@@ -43,30 +43,31 @@ class TestClientJob < Test::Unit::TestCase
 
     def test_sendMessage
 
-        c = ClientJob.new(LOCAL_ID, REMOTE_ID, [{:objectID=>0,:methodID=>0,:argument=>"hello world"}], nil)
+        c = ClientJob.new(LOCAL_ID, REMOTE_ID, Queue.new) do
+            request(0,0,"hello world")
+        end
 
         assert_equal("\x00\x00\x00\x00\x0bhello world", c.sendMessage(0))
-
-        assert_equal(false, c.active?)
         
     end
 
     def test_registerSent
 
-        c = ClientJob.new(LOCAL_ID, REMOTE_ID, [{:objectID=>0,:methodID=>0,:argument=>"hello world"}], nil)
+        c = ClientJob.new(LOCAL_ID, REMOTE_ID, Queue.new) do
+            request(0,0,"hello world")
+        end
         c.sendMessage(0)
         time = Time.now
 
         c.registerSent(1, time)
-
-        assert_equal(true, c.active?)
-        assert_equal(time, c.timeout)
         
     end
 
     def test_receiveMessage
 
-        c = ClientJob.new(LOCAL_ID, REMOTE_ID, [{:objectID=>0,:methodID=>0,:argument=>"hello world"}], nil)
+        c = ClientJob.new(LOCAL_ID, REMOTE_ID, Queue.new) do
+            request(0,0,"hello world")
+        end
         c.sendMessage(0)
         time = Time.now
         c.registerSent(1, time)

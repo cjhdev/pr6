@@ -25,8 +25,6 @@ module Wrangle
 
     class ClientJob
 
-        @pending = []
-
         attr_reader :id
         attr_reader :remoteID
         attr_reader :localID
@@ -39,8 +37,10 @@ module Wrangle
         DEFAULT_RETRY_MAX = 0
         DEFAULT_RETRY_PERIOD = 0
                 
-        def initialize(localID, remoteID, requests, **opts)
+        def initialize(localID, remoteID, responseQueue, **opts, &requests)
 
+            @requestList = []
+            
             time = Time.now
 
             @id = SecureRandom.uuid
@@ -49,8 +49,6 @@ module Wrangle
             @localID = EUI64.new(localID).to_s
             @remoteID = EUI64.new(remoteID).to_s
             
-            @status = :init
-                                
             @confirmed = opts[:confirmed]||true
             @breakOnError = opts[:breakOnError]||false
             @createTime = time.dup,
@@ -63,27 +61,24 @@ module Wrangle
 
             @timeout = nil
 
-            @client = Client.new(confirmed: opts[:confirmed], breakOnError: opts[:breakOnError]) do
-                requests.each do |m|
-                    request(m[:objectID], m[:methodIndex], m[:argument])
-                end
-                response(self) do |result|
-                    @response.push(result)
-                end
-            end
-
             @ip = opts[:ip]
             @port = opts[:port]
 
-            @response = Queue.new
             @counter = nil
+            @responseQueue = responseQueue
+
+            self.instance_exec(&requests)
+
+            @client = Client.new(@requestList, confirmed: opts[:confirmed], breakOnError: opts[:breakOnError], receiver: self) do |result|                
+                @responseQueue.push(result)
+            end
 
         end
 
         def sendMessage(maxOut)
-            @client.output(maxOut)
             @timeout = nil
             @counter = nil
+            @client.output(maxOut)            
         end
 
         def receiveMessage(message)
@@ -110,12 +105,7 @@ module Wrangle
                 else
                     @timeout = time + @retryPeriod
                 end
-                @status = :active
             end
-        end
-
-        def active?
-            @status == :active
         end
 
         def counterMatch?(counter)
@@ -129,6 +119,12 @@ module Wrangle
         def retry?
             @retryCount < @retryMax                
         end
+
+        private
+
+            def request(objectID, methodIndex, argument)
+                @requestList.push(MethodRequest.new(objectID, methodIndex, argument))
+            end
 
     end
 

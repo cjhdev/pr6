@@ -20,7 +20,6 @@
 require 'wrangle/eui64_pair'
 require 'wrangle/association'
 require 'set'
-require 'wrangle/db'
 require 'sequel'
 require 'base64'
 require 'json'
@@ -29,11 +28,15 @@ module Wrangle
 
     class AssociationRecord
 
+        def self.db=(db)
+            @db = db
+        end
+
         def self.create(entityID, localID, remoteID, **opts)
         
             a = Association.new(entityID, localID, remoteID, opts)
 
-            DB.association[:associations].insert(
+            @db[:associations].insert(
                 entityID: a.entityID,
                 localID: a.localID,
                 remoteID: a.remoteID,
@@ -49,7 +52,7 @@ module Wrangle
         end
 
         def self.read(entityID, localID, remoteID)
-            record = DB.association[:associations].select.where(entityID: EUI64.new(entityID).to_s, assocID: EUI64.pair(localID, remoteID).to_s).first
+            record = @db[:associations].select.where(entityID: EUI64.new(entityID).to_s, assocID: EUI64.pair(localID, remoteID).to_s).first
             if record
                 Association.new(
                     entityID,
@@ -68,7 +71,7 @@ module Wrangle
         end
 
         def self.update(a)
-            DB.association[:associations].where(entityID: a.entityID, assocID: a.assocID).update(
+            @db[:associations].where(entityID: a.entityID, assocID: a.assocID).update(
                 remoteMax: a.remoteMax,
                 assignedRole: JSON.dump(a.assignedRole.to_a),
                 secret: Base64.encode64(a.secret),
@@ -81,16 +84,16 @@ module Wrangle
         
         def self.delete(entityID, localID, remoteID)
             a = Association.new(entityID, localID, remoteID)
-            DB.association[:associations].where(entityID: a.entityID, assocID: a.assocID).delete
+            @db[:associations].where(entityID: a.entityID, assocID: a.assocID).delete
             true
         end
 
         def self.inputCounter(entityID, localID, remoteID, counter)
             result = false
-            DB.association.transaction do
+            @db.transaction do
                 a = read(entityID, localID, remoteID)
                 if a.inputCounter(counter)
-                    DB.association[:associations].where(entityID: a.localID, assocID: a.assocID).update(remoteInvocationCounter: JSON.dump(a.remoteInvocationCounter.to_a))
+                    @db[:associations].where(entityID: a.localID, assocID: a.assocID).update(remoteInvocationCounter: JSON.dump(a.remoteInvocationCounter.to_a))
                     result = true
                 end
             end
@@ -99,11 +102,11 @@ module Wrangle
            
         def self.outputCounter(entityID, remoteID)
             counter = nil
-            DB.association.transaction do
+            @db.transaction do
                 a = read(entityID, entityID, remoteID)
                 counter = a.outputCounter
                 if counter
-                    DB.association[:associations].where(entityID: a.entityID, assocID: a.assocID).update(invocationCounter: a.invocationCounter)
+                    @db[:associations].where(entityID: a.entityID, assocID: a.assocID).update(invocationCounter: a.invocationCounter)
                 end
             end
             counter

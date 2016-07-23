@@ -19,14 +19,11 @@ static VALUE ConstClient;
 
 /* static function prototypes *****************************************/
 
-static VALUE clientInitialize(int argc, VALUE* argv, VALUE self);
 static VALUE clientInput(VALUE self, VALUE expectedCounter, VALUE msg);
 static VALUE clientOutput(int argc, VALUE* argv, VALUE self);
 static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list);
 static VALUE resultToSymbol(enum pr6_client_result result);
 static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOnError, VALUE requests);
-static VALUE responseHandler(int argc, VALUE* argv, VALUE self);
-static VALUE request(VALUE self, VALUE objectID, VALUE methodIndex, VALUE argument);
 static VALUE clientTimeout(VALUE self);
 static VALUE clientPeekCounter(VALUE self, VALUE msg);
 
@@ -36,14 +33,10 @@ void EXT_PR6_ClientInit(void)
 {
     VALUE wrangle = rb_define_module("Wrangle");
     ConstClient = rb_define_class_under(wrangle, "Client", rb_cObject);
-
-    rb_define_method(ConstClient, "initialize", clientInitialize, -1);
+    
     rb_define_method(ConstClient, "input", clientInput, 2);
     rb_define_method(ConstClient, "output", clientOutput, -1);    
     rb_define_method(ConstClient, "timeout", clientTimeout, 0);    
-
-    rb_define_private_method(ConstClient, "request", request, 3);
-    rb_define_private_method(ConstClient, "response", responseHandler, -1);
 
     rb_define_module_function(ConstClient, "peekCounter", clientPeekCounter, 1);
     
@@ -57,90 +50,6 @@ void EXT_PR6_ClientInit(void)
 }
 
 /* static functions ***************************************************/
-
-static VALUE request(VALUE self, VALUE objectID, VALUE methodIndex, VALUE argument)
-{
-    if(NUM2UINT(rb_funcall(rb_iv_get(self, "@methods"), rb_intern("size"), 0)) > 0xffff){
-
-        rb_bug("too many methods defined");
-    }
-
-    rb_ary_push(rb_iv_get(self, "@methods"), rb_funcall(ConstMethodRequest, rb_intern("new"), 3, objectID, methodIndex, argument));
-    
-    return Qtrue;
-}
-
-static VALUE responseHandler(int argc, VALUE* argv, VALUE self)
-{
-    VALUE receiver;
-    VALUE opts;
-    VALUE handler;
-    
-    rb_scan_args(argc, argv, "01:&", &receiver, &opts, &handler);
-
-    rb_iv_set(self, "@receiver", receiver);
-    rb_iv_set(self, "@responseHandler", handler);
-
-    return Qtrue;
-}
-
-static VALUE clientInitialize(int argc, VALUE* argv, VALUE self)
-{
-    VALUE opts;
-    VALUE block;
-
-    rb_scan_args(argc, argv, ":&", &opts, &block);
-
-    if(opts == Qnil){
-        opts = rb_hash_new();
-    }
-
-    rb_iv_set(self, "@responseHandler", Qnil);
-
-    VALUE confirmed = rb_hash_aref(opts, ID2SYM(rb_intern("confirmed")));
-    VALUE breakOnError = rb_hash_aref(opts, ID2SYM(rb_intern("breakOnError")));
-
-    if((confirmed == Qnil) || (confirmed == Qtrue)){
-
-        rb_iv_set(self, "@confirmed", Qtrue);
-    }
-    else{
-
-        rb_iv_set(self, "@confirmed", Qfalse);
-    }
-
-    if((breakOnError == Qnil) || (breakOnError == Qfalse)){
-
-        rb_iv_set(self, "@breakOnError", Qfalse);
-    }
-    else{
-
-        rb_iv_set(self, "@breakOnError", Qtrue);
-    }
-
-    rb_iv_set(self, "@methods", rb_ary_new());
-
-    if(block != Qnil){
-
-        rb_funcall_with_block(self, rb_intern("instance_exec"), 0, NULL, block);
-    }
-    else{
-
-        rb_raise(rb_eException, "must pass a block");
-    }
-
-    if(NUM2UINT(rb_funcall(rb_iv_get(self, "@methods"), rb_intern("size"), 0)) == 0){
-
-        rb_raise(rb_eException, "must define at least one method");
-    }
-    
-    if(rb_iv_get(self, "@responseHandler") == Qnil){
-
-        rb_raise(rb_eException, "must define a response handler");
-    }
-
-    return self;
-}
 
 static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
 {

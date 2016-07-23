@@ -44,6 +44,38 @@ module Wrangle
         # @returns [String] message
         #
 
+        def initialize(requestList, **opts, &responseHandler)
+
+            case opts[:confirmed]
+            when false
+                @confirmed = false
+            else
+                @confirmed = true
+            end
+                
+            @breakOnError = opts[:breakOnError]||false
+            @receiver = opts[:receiver]
+            @methods = []
+
+            requestList.to_a.each do |r|
+                if !r.is_a? MethodRequest
+                    raise ArgumentError.new "expecting requestList to be an array of MethodRequest instances"
+                end
+                @methods << r
+            end
+
+            if requestList.to_a.size == 0
+                raise ArgumentError.new "requestList.size must be greater than zero"
+            end
+
+            if responseHandler.nil?
+                raise ArgumentError.new "must pass &responseHandler"
+            end
+
+            @responseHandler = responseHandler
+            
+        end
+
         def cancel
             res = []
             @methods.each do |req|

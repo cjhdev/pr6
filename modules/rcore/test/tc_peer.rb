@@ -30,27 +30,49 @@ class TestPeer < Test::Unit::TestCase
     LOCAL_ID = "00-00-00-00-00-00-00-01"
     REMOTE_ID = "00-00-00-00-00-00-00-ff"
 
-    def test_setup
+    def setup
 
-        Sequel.extension :migration
-        #DB.association = Sequel.sqlite '', :loggers => [Logger.new($stdout)]
-        DB.association = Sequel.sqlite
-        #DB.association.sql_log_level = :debug
-        Sequel::Migrator.run(DB.association, "#{Dir.pwd}/db/migrations")
-
+        Sequel.extension :migration        
+        db = Sequel.sqlite        
+        Sequel::Migrator.run(db, "#{Dir.pwd}/db/migrations")
+        AssociationRecord.db = db
         AssociationRecord.create(ENTITY_ID, LOCAL_ID, REMOTE_ID)
+        Thread.abort_on_exception = true
         
     end
 
     def test_init
 
-        Peer.new(ENTITY_ID, {})
+        Peer.new(ENTITY_ID)
         
     end
 
-    def test_input
-
-        
+    def test_start
+        peer = Peer.new(ENTITY_ID)
+        peer.start
+        assert(peer.running?)
     end
+
+    def test_stop
+        peer = Peer.new(ENTITY_ID)
+        peer.start
+        assert(peer.running?)
+        peer.stop
+        assert(!peer.running?)
+    end
+
+    def test_request
+
+        peer = Peer.new(ENTITY_ID).start
+
+        peer.request(REMOTE_ID) do
+            request(0,0,"hello")
+        end
+
+        puts peer.output.bytes
+            
+    end
+
+    
 
 end

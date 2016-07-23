@@ -38,14 +38,15 @@ module Wrangle
             @running
         end
 
-        def initialize(entityID, objects, **opts)
+        def initialize(entityID, **opts)
 
             @entityID = EUI64.new(entityID).to_s
 
-            @objects = objects.to_h
-            @objects.each do |k,v|
-                if k != v.objectID
-                    raise
+            @objects = {}
+
+            if opts[:objectList]
+                opts[:objectList].each do |o|
+                    @objects[o.objectID] = o
                 end
             end
             
@@ -69,7 +70,7 @@ module Wrangle
         # start threads
         def start
 
-            if !running?
+            if !@running
 
                 @processTimeThread = Thread.new { processTick }
                 @threadPool << @processTimeThread
@@ -80,8 +81,10 @@ module Wrangle
                 workers = DEFAULT_WORKER_POOL_SIZE
                 while workers > 0  do
                     workers -= 1
-                    @threadPool << Thread.new { processMessage }
+                    @threadPool << Thread.new { processMessage }                    
                 end
+
+                @running = true
 
             end
 
@@ -113,17 +116,17 @@ module Wrangle
         end
 
         # make a request
-        def request(remoteID, requests, **opts)
+        def request(remoteID, **opts, &requests)
 
             # raise any exceptions now
-            ClientJob.new(@entityID, remoteID, requests, opts)
             responseQueue = Queue.new
-            
+            ClientJob.new(@entityID, remoteID, responseQueue, opts, &requests)
+
             @processJobQueue.push({
                 :type=>:newJob,
                 :remoteID=>remoteID,
                 :requests=>requests,
-                :response=>responseQueue,
+                :responseQueue=>responseQueue,
                 :opts=>opts                
             })
 
@@ -133,17 +136,13 @@ module Wrangle
 
         # deliver message to Peer
         def input(message, **opts)
-
-            if @processMessageQueue.size < @maxProcessMessageQueue
-                @processMessageQueue.push({
-                    :type => :receive,
-                    :ip => opts[:ip],
-                    :port => opts[:port],
-                    :message => message
-                })
-            else
-                STDERR.puts "@processMessageQueue is full: dropping input"
-            end
+            
+            @processMessageQueue.push({
+                :type => :receive,
+                :ip => opts[:ip],
+                :port => opts[:port],
+                :message => message
+            })            
 
             self
 
@@ -179,6 +178,8 @@ module Wrangle
 
                 loop do
 
+                    puts "tick!"
+
                     sleep(DEFAULT_TICK)
                     @processJobQueue.push({:type => :notifyTick})
 
@@ -193,6 +194,8 @@ module Wrangle
                 loop do
 
                     input = @processJobQueue.pop
+
+                    puts "processJob: got #{input}"
 
                     time = Time.now
 
@@ -350,17 +353,22 @@ module Wrangle
                             preJob = ClientJob.new(
                                 @entityID,
                                 input[:remoteID],
-                                input[:requests],
-                                input[:opts]
+                                input[:responseQueue],
+                                input[:opts],
+                                &input[:requests]                                
                             )
 
                         end while @ids.include? preJob.id
 
+                        puts "made job: #{preJob.inspect}"
+
                         # make a note of the id
-                        @ids << preJob.id
+                        @ids << preJob.id                        
 
                         # place in prejobs until confirmed as sent
                         @preJobs[preJob.id] = preJob
+
+                        puts "preJobs: #{@preJobs}"
 
                         # delegate sending
                         @processMessageQueue.push({
@@ -368,10 +376,12 @@ module Wrangle
                             :id=>preJob.id,
                             :to=>preJob.remoteID,
                             :from=>preJob.localID, 
-                            :message=>preJob.sendMessage,
+                            :message=>preJob.sendMessage(0),
                             :ip => preJob.ip,
-                            :port => job.port
+                            :port => preJob.port
                         })
+
+                        puts "pushed onto @processMessageQueue"
 
                     else
                         raise "unknow message type"
@@ -388,14 +398,16 @@ module Wrangle
 
                     input = @processMessageQueue.pop
 
-                    case message[:type]
+                    puts "processMessage: got #{input}"
+
+                    case input[:type]
                     when :send
 
-                        id = message[:id]
-                        to = message[:to]
-                        from = message[:from]
+                        id = input[:id]
+                        to = input[:to]
+                        from = input[:from]
                         
-                        output = packMessage(from, to, message[:data])
+                        output = packMessage(to, input[:data])
 
                         if output
                     
@@ -426,7 +438,7 @@ module Wrangle
 
                     when :receive
 
-                        result = unpackMessage(messageHash[:data])
+                        result = unpackMessage(input[:data])
 
                         if result
 
@@ -466,6 +478,8 @@ module Wrangle
 
                                 end
 
+                            else
+                                raise
                             end
 
                         end
