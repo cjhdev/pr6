@@ -22,7 +22,7 @@ module Wrangle
             @req = req
             @result = result
 
-            if result == :PR6_RESULT_SUCCESS
+            if result == :PR6_CLIENT_RESULT_SUCCESS
 
                 @returnValue = returnValue.to_s
 

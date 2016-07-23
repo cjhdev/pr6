@@ -41,8 +41,7 @@ end
 # insert and instance of echo into an object list
 serverObjectList = []
 serverObjectList << EchoCID0000.new(OBJECT_ID) do
-    defineMethodHandler("echo", [:public]) do |arg|
-        
+    defineMethodHandler("echo", [:public]) do |arg|        
         arg
     end
 end

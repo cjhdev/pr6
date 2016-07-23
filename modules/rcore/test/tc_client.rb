@@ -98,13 +98,20 @@ class TestClient < Test::Unit::TestCase
 
         touch = 0
 
-        c = Client.new(requestList) do
+
+        c = Client.new(requestList, recevier: self) do |res|
             touch = 1
+            
+            assert_equal(0, res.first.objectID)
+            assert_equal(0, res.first.methodIndex)
+            assert_equal("hello world", res.first.argument)
+            assert_equal(:PR6_CLIENT_RESULT_SUCCESS, res.first.result)
+            assert_equal("hey", res.first.returnValue)
         end
 
         c.output(30)
 
-        input = "\x04\x00\x01\x00\x00".force_encoding("ASCII-8BIT")
+        input = "\x04\x00\x01\x00\x03hey".force_encoding("ASCII-8BIT")
         c.input(1, input)
 
         assert_equal(1, touch)
