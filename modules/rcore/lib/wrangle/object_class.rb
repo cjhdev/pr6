@@ -181,7 +181,7 @@ module Wrangle
     
             if @method[methodIndex]
 
-                if (@method[methodIndex][:role] & caller.association.assignedRole).size > 0
+                if (@method[methodIndex][:role] & caller.association.assignedRole.to_a).size > 0
 
                     begin
 

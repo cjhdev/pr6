@@ -24,10 +24,15 @@ module Wrangle
 
     class UDPNode
 
+        attr_reader :port
+
         def initialize(entityID, **opts)
 
-            @port = opts[:port]||0            
-            @socket = UDPSocket.new.bind("0.0.0.0", @port)
+            @port = opts[:port]||nil
+            @socket = UDPSocket.new
+            @socket.bind("", @port)
+
+            @port = @socket.local_address.ip_port
 
             @peer = Peer.new(entityID, objectList: opts[:objectList]).start
 
@@ -39,7 +44,7 @@ module Wrangle
                 loop do
 
                     message, addrInfo = @socket.recvfrom(1200)
-                    @peer.input(message, ip: addrInfo[2], port: addrInfo[1]))
+                    @peer.input(message, ip: addrInfo[2], port: addrInfo[1])
 
                 end
 
@@ -51,7 +56,8 @@ module Wrangle
                 loop do
 
                     input = @peer.output
-                    @socket.send(input[:message], input[:ip], input[:port])
+
+                    @socket.send(input[:message], 0, input[:ip], input[:port])
     
                 end
 

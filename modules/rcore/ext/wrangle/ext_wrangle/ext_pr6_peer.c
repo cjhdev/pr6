@@ -57,7 +57,7 @@ void EXT_PR6_PeerInit(void)
     VALUE wrangle = rb_define_module("Wrangle");
     VALUE peer = rb_define_class_under(wrangle, "Peer", rb_cObject);
 
-    rb_define_private_method(peer, "unpackMessage", peerUnpackMessage, 3);
+    rb_define_private_method(peer, "unpackMessage", peerUnpackMessage, 1);
     rb_define_private_method(peer, "packMessage", peerPackMessage, 2);
 
     SymText = ID2SYM(rb_intern("text"));
@@ -81,7 +81,7 @@ void EXT_PR6_PeerInit(void)
 static VALUE peerUnpackMessage(VALUE self, VALUE msg)
 {
     VALUE retval;
-    VALUE oEntityID = rb_funcall(ConstEUI64, rb_intern("new_to_bytes"), 1, rb_funcall(self, rb_intern("entityID"), 0));
+    VALUE oEntityID = rb_funcall(ConstEUI64, rb_intern("new_to_bytes"), 1, rb_iv_get(self, "@entityID"));
 
     uint32_t outMax = RSTRING_LEN(msg);
     uint8_t *out = ALLOC_N(uint8_t, outMax);
@@ -255,3 +255,5 @@ static bool outputCounter(const uint8_t *entityID, const uint8_t *remoteID, uint
 
     return result;
 }
+
+

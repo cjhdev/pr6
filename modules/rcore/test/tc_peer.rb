@@ -61,6 +61,7 @@ class TestPeer < Test::Unit::TestCase
         assert(!peer.running?)
     end
 
+    
     def test_request
 
         peer = Peer.new(ENTITY_ID).start
@@ -69,10 +70,9 @@ class TestPeer < Test::Unit::TestCase
             request(0,0,"hello")
         end
 
-        puts peer.output.bytes
+        peer.output
             
     end
 
     
-
 end

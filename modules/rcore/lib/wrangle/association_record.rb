@@ -113,7 +113,7 @@ module Wrangle
         end
            
         def self.encryptGCM(entityID, remoteID, iv, text, aad)
-            read(entityID, localID, remoteID).encryptGCM(iv, text, aad)
+            read(entityID, entityID, remoteID).encryptGCM(iv, text, aad)
         end
 
         def self.decryptGCM(entityID, localID, remoteID, iv, text, aad, mac)

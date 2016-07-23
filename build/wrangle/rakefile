@@ -21,6 +21,12 @@ task :stage do
  
 end
 
+task :stage_and_compile => :stage do
+
+    system "cd #{STAGE_DIR} && rake compile"
+    
+end
+
 desc "run all unit tests"
 task :test => :stage do
 

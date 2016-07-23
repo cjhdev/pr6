@@ -21,4 +21,4 @@
 require 'wrangle/association_record'
 require 'wrangle/udp_node'
 require 'wrangle/object_class'
-
+require 'wrangle/log'

@@ -137,4 +137,9 @@ class TestEUI64 < Test::Unit::TestCase
 
     end
 
+    def test_new_to_bytes
+        input = "00-00-00-00-00-00-00-01"
+        assert_equal("\x00\x00\x00\x00\x00\x00\x00\x01", EUI64.new_to_bytes(input))
+    end
+
 end

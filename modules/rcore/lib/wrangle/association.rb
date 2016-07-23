@@ -20,6 +20,7 @@
 require 'wrangle/eui64_pair'
 require 'set'
 require 'openssl'
+require 'wrangle/log'
 
 module Wrangle
 
@@ -108,7 +109,7 @@ module Wrangle
                 result = decrypted
                 
             rescue OpenSSL::Cipher::CipherError
-                STDERR.puts "could not validate input"
+                Log::debug "#{__method__}: input failed authentication"
             end
 
             result

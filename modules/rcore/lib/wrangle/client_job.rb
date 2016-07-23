@@ -20,6 +20,7 @@
 
 require 'securerandom'
 require 'wrangle/eui64_pair'
+require 'wrangle/client'
 
 module Wrangle
 
@@ -33,6 +34,7 @@ module Wrangle
         attr_reader :port
         attr_reader :ip
         attr_reader :response
+        attr_reader :counter
         
         DEFAULT_RETRY_MAX = 0
         DEFAULT_RETRY_PERIOD = 0
@@ -71,7 +73,10 @@ module Wrangle
 
             @client = Client.new(@requestList, confirmed: opts[:confirmed], breakOnError: opts[:breakOnError], receiver: self) do |result|                
                 @responseQueue.push(result)
+                @finished = true
             end
+
+            @finished = false
 
         end
 
@@ -86,7 +91,7 @@ module Wrangle
                 @client.input(@expectedCounter, message)
             else
                 raise "haven't register message as sent"
-            end
+            end            
         end
 
         def doTimeout
@@ -118,6 +123,10 @@ module Wrangle
 
         def retry?
             @retryCount < @retryMax                
+        end
+
+        def finished?
+            @finished
         end
 
         private

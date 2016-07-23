@@ -23,6 +23,7 @@ require 'wrangle/client_job'
 require 'wrangle/association_record'
 require 'time'
 require 'wrangle/eui64_pair'
+require 'wrangle/peer'
 
 module Wrangle
 
@@ -141,7 +142,7 @@ module Wrangle
                 :type => :receive,
                 :ip => opts[:ip],
                 :port => opts[:port],
-                :message => message
+                :data => message
             })            
 
             self
@@ -178,8 +179,6 @@ module Wrangle
 
                 loop do
 
-                    puts "tick!"
-
                     sleep(DEFAULT_TICK)
                     @processJobQueue.push({:type => :notifyTick})
 
@@ -195,13 +194,13 @@ module Wrangle
 
                     input = @processJobQueue.pop
 
-                    puts "processJob: got #{input}"
-
                     time = Time.now
 
                     case input[:type]
                     # notify job that message was not sent
                     when :notifyNotSent
+
+                        Log::debug "#{__method__}: #{input}"
 
                         id = input[:id]
                         sendTime = input[:time]
@@ -221,10 +220,12 @@ module Wrangle
                         # remove id from list
                         @ids.delete(preJob.id)
 
-                        STDERR.puts "failed to send job #{preJob.id} at #{sendTime}"
+                        Log::info("#{__method__}: failed to send job #{preJob.id} at #{sendTime}")
                         
                     # notify job that message has been sent
                     when :notifySent
+
+                        Log::debug "#{__method__}: #{input}"
 
                         id = input[:id]
                         counter = input[:counter]
@@ -237,13 +238,13 @@ module Wrangle
                         end
 
                         # register the send
-                        preJob.registerSent(sendTime, counter)
+                        preJob.registerSent(counter, sendTime)
 
                         # remove from pre-job list
                         @preJobs.delete(id)
 
                         # this is how jobs are indexed in @job list
-                        index = "#{preJob.assocID}-#{preJob.counter}"
+                        index = "#{preJob.assocID}-#{counter}"
 
                         # this should be exceedingly rare - delete both jobs to resolve ambiguity
                         # todo: explain exactly what this situation is
@@ -268,15 +269,15 @@ module Wrangle
                             @jobs[index] = preJob
                             
                             # insert new job into @timeouts by order of timeout
-                            if @timeouts.size > 0
-                                @timeouts.each_with_index do |j, i|
+                            if @timeoutList.size > 0
+                                @timeoutList.each_with_index do |j, i|
                                     if j.timeout > preJob.timeout
-                                        @timeouts.insert(i, preJob)
+                                        @timeoutList.insert(i, preJob)
                                         break
                                     end
                                 end
                             else
-                                @timeouts << preJob
+                                @timeoutList << preJob
                             end
                             
                         end                           
@@ -285,11 +286,13 @@ module Wrangle
                     when :notifyTick
                         
                         # detect timeouts
-                        @timeouts.each do |j|
+                        @timeoutList.each do |j|
                             if j.timeout <= time
 
+                                Log::debug "#{__method__}: job #{j.id} timeout!"
+                            
                                 # remove from timeout list and jobs
-                                @timeouts.delete(j)
+                                @timeoutList.delete(j)
                                 @jobs.delete("#{j.id}-#{j.counter}")
 
                                 # try again?
@@ -323,6 +326,8 @@ module Wrangle
                     # give an inbound message to a client job
                     when :processMessage
 
+                        Log::debug "#{__method__}: #{input}"
+
                         to = input[:to]
                         from = input[:from]
                         message = input[:message]
@@ -334,16 +339,24 @@ module Wrangle
 
                         job = @jobs[index]
 
-                        if job and job.receiveMessage(message).finished?
+                        if job
 
-                            # remove from timeout list and jobs
-                            @timeouts.delete(j)
-                            @jobs.delete(index)
+                            job.receiveMessage(message)
+
+                            if job.finished?
+
+                                # remove from timeout list and jobs
+                                @timeoutList.delete(j)
+                                @jobs.delete(index)
+
+                            end
                             
                         end
                             
                     # insert a new job into the queue
                     when :newJob
+
+                        Log::debug "#{__method__}: #{input}"
 
                         preJob = nil
 
@@ -360,15 +373,11 @@ module Wrangle
 
                         end while @ids.include? preJob.id
 
-                        puts "made job: #{preJob.inspect}"
-
                         # make a note of the id
                         @ids << preJob.id                        
 
                         # place in prejobs until confirmed as sent
                         @preJobs[preJob.id] = preJob
-
-                        puts "preJobs: #{@preJobs}"
 
                         # delegate sending
                         @processMessageQueue.push({
@@ -380,8 +389,6 @@ module Wrangle
                             :ip => preJob.ip,
                             :port => preJob.port
                         })
-
-                        puts "pushed onto @processMessageQueue"
 
                     else
                         raise "unknow message type"
@@ -398,7 +405,7 @@ module Wrangle
 
                     input = @processMessageQueue.pop
 
-                    puts "processMessage: got #{input}"
+                    Log::debug "#{__method__}: #{input}"
 
                     case input[:type]
                     when :send
@@ -406,8 +413,8 @@ module Wrangle
                         id = input[:id]
                         to = input[:to]
                         from = input[:from]
-                        
-                        output = packMessage(to, input[:data])
+
+                        output = packMessage(to, input[:message])
 
                         if output
                     
@@ -438,12 +445,14 @@ module Wrangle
 
                     when :receive
 
+                        id = input[:id]
+                        
                         result = unpackMessage(input[:data])
 
                         if result
 
                             case result[:recipient]
-                            when :client
+                            when :PR6_RECIPIENT_CLIENT
 
                                 @processJobQueue.push({
                                     :type => :processMessage,
@@ -452,17 +461,17 @@ module Wrangle
                                     :message => result[:data]                                    
                                 })
 
-                            when :server
+                            when :PR6_RECIPIENT_SERVER
 
                                 association = AssociationRecord.read(result[:to], result[:to], result[:from])
 
                                 if association
 
-                                    output = PackMessage(result[:to], Server.new(association, @objects).input(result[:counter], result[:data]).output)
+                                    output = packMessage(result[:from], Server.new(association, @objects).input(result[:counter], result[:data]))
                                             
                                     if output.size > 0
 
-                                        @output.push({
+                                        @outputQueue.push({
                                             :to => result[:from],
                                             :from => result[:to],
                                             :ip => input[:ip],
@@ -474,8 +483,8 @@ module Wrangle
 
                                 else
 
-                                    STDERR.puts "association lost"
-
+                                    Log::warning "#{__method__}: assocation record removed since last read"
+    
                                 end
 
                             else

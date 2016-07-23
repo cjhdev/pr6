@@ -280,6 +280,7 @@ static uint32_t getGCM(uint8_t *in, uint32_t inLen, struct pr6_gcm *out)
         pos += PR6_SIZE_ENTITY_ID;
 
         out->aad = &in[pos];
+        out->aadLen = PR6_SIZE_GCM_COUNTER + PR6_SIZE_GCM_PAYLOAD_LEN;
 
         out->counter = getCounter(&in[pos]);
         pos += PR6_SIZE_GCM_COUNTER;
@@ -290,8 +291,6 @@ static uint32_t getGCM(uint8_t *in, uint32_t inLen, struct pr6_gcm *out)
         if((inLen - pos) >= (PR6_SIZE_GCM_MAC128 + (uint32_t)out->payloadLen)){
         
             out->payload = &in[pos];
-            out->aadLen = pos;
-
             pos += out->payloadLen;
 
             out->mac128 = &in[pos];
