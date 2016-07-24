@@ -43,6 +43,7 @@ extern "C" {
 
 /* enums **************************************************************/
 
+/** the following result codes are returned to the application */
 enum pr6_client_result {
 
     PR6_CLIENT_RESULT_SUCCESS = 0,          /**< successful invocation */
@@ -56,11 +57,12 @@ enum pr6_client_result {
     PR6_CLIENT_RESULT_TIMEOUT               /**< client request timed out */
 };
 
+/** a client instance shall be in one of the following states */
 enum pr6_client_state {
-    PR6_CLIENT_STATE_INIT = 0,          /**< initialised */
-    PR6_CLIENT_STATE_PENDING,           /**< sent a message, waiting for confirmation it was packaged by supporting layer */
-    PR6_CLIENT_STATE_SENT,              /**< sent a message, confirmed by supporting layer */
-    PR6_CLIENT_STATE_COMPLETE           /**< sent a message, confirmed, got a response */
+    PR6_CLIENT_STATE_INIT = 0,          /**< initialised (you may add method requests) */
+    PR6_CLIENT_STATE_PENDING,           /**< message output but not confirmed */
+    PR6_CLIENT_STATE_SENT,              /**< message output and confirmed */
+    PR6_CLIENT_STATE_COMPLETE           /**< message output and confirmed, operation complete */
 };
 
 /* forward declarations ***********************************************/
@@ -97,8 +99,8 @@ struct pr6_client {
 
     uint16_t reqLen;    /**< byte length of request serialised from `list` */
 
-    enum pr6_client_state state;
-    uint16_t counter;
+    enum pr6_client_state state;    /** state of this instance @see pr6_client_state */ 
+    uint16_t counter;               /** the counter embedded in a response must match this value */
 };
 
 /** Binding between Request and Response */
@@ -141,7 +143,7 @@ struct pr6_client_req_res {
 struct pr6_client *PR6_ClientInit(struct pr6_client *r, struct pr6_client_req_res *pool, uint16_t poolMax, bool confirmed, bool breakOnError, pr6_client_result_fn_t result, uint16_t objectID, uint8_t methodIndex, const uint8_t *arg, uint16_t argLen);
 
 /**
- * Add another method invocation to an initialised but inactive client instance
+ * Add another method invocation to a client instance in CLIENT_STATE_INIT state
  *
  * @param[in] r initialised and inactive client instance
  * @param[in] objectID objectID to reference object
@@ -180,7 +182,6 @@ struct pr6_client *PR6_ClientInit_FromOutput(struct pr6_client *r, struct pr6_cl
  * Deliver a message to a client instance
  *
  * @note may call `cbResponse()` if complete response has been received
- * @note may call `cbException()` if exception was encountered
  *
  * @param[in] r client instance
  * @param[in] in input buffer
@@ -202,10 +203,10 @@ void PR6_ClientInput(struct pr6_client *r, const uint8_t *in, uint16_t inLen);
 uint16_t PR6_ClientOutput(struct pr6_client *r, uint8_t *out, uint16_t outMax);
 
 /**
- * Confirm client output with counter value from supporting layers
+ * Confirm output message has been sent
  *
  * @param[in] r client instance
- * @param[in] counter
+ * @param[in] counter this value shall be compared to the counter embedded in response
  *
  * */
 void PR6_ClientOutputConfirm(struct pr6_client *r, uint16_t counter);
