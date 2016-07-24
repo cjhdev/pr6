@@ -33,7 +33,7 @@
 static VALUE serverInput(VALUE self, VALUE counter, VALUE input);
 static enum pr6_result symbolToResult(VALUE symbol);
 static enum pr6_adapter_result symbolToAdapterResult(VALUE symbol);
-static enum pr6_adapter_result serverObjectInterface(const struct pr6_server *r, struct pr6_server_adapter *arg, enum pr6_result *result);
+static enum pr6_adapter_result serverObjectInterface(void *ctxt, const struct pr6_server *r, struct pr6_server_adapter *arg, enum pr6_result *result);
 static uint8_t castAdapterResult(uint8_t in, enum pr6_adapter_result *out);
 static VALUE serverInitialise(VALUE self, VALUE association, VALUE objects);
 static VALUE association(VALUE self);
@@ -47,8 +47,6 @@ void EXT_PR6_ServerInit(void)
 {
     VALUE wrangle = rb_define_module("Wrangle");
     VALUE pr6Server = rb_define_class_under(wrangle, "Server", rb_cObject);
-
-    rb_define_alloc_func(pr6Server, StateWrapperAlloc);
     
     rb_define_method(pr6Server, "initialize", serverInitialise, 2);
     rb_define_method(pr6Server, "input", serverInput, 2);    
@@ -67,13 +65,8 @@ static VALUE serverInitialise(VALUE self, VALUE association, VALUE objects)
 
 static VALUE serverInput(VALUE self, VALUE counter, VALUE input)
 {
-    struct pr6_server *r;
+    struct pr6_server r;
     
-    struct state_wrapper *wrapper;
-    Data_Get_Struct(self, struct state_wrapper, wrapper);
-    r = &wrapper->state.server;
-    assert(wrapper->self == self);
-
     const uint8_t *in = (const uint8_t *)RSTRING_PTR(input);
     uint32_t inLen = (uint32_t)RSTRING_LEN(input);
     VALUE outMax = rb_funcall(rb_iv_get(self, "@association"), rb_intern("remoteMax"), 0);
@@ -91,7 +84,7 @@ static VALUE serverInput(VALUE self, VALUE counter, VALUE input)
     uint8_t *out = ALLOC_N(uint8_t, _outMax);
     uint16_t outLen;
 
-    PR6_ServerInput(r, serverObjectInterface, NULL, 0U, (uint16_t)NUM2UINT(counter), in, inLen, out, &outLen, _outMax);
+    PR6_ServerInput(&self, &r, serverObjectInterface, NULL, 0U, (uint16_t)NUM2UINT(counter), in, inLen, out, &outLen, _outMax);
 
     return rb_str_new((const char *)out, outLen);
 }
@@ -160,11 +153,11 @@ static enum pr6_adapter_result symbolToAdapterResult(VALUE symbol)
     return retval;
 }
 
-static enum pr6_adapter_result serverObjectInterface(const struct pr6_server *r, struct pr6_server_adapter *arg, enum pr6_result *result)
+static enum pr6_adapter_result serverObjectInterface(void *ctxt, const struct pr6_server *r, struct pr6_server_adapter *arg, enum pr6_result *result)
 {
     assert(r != NULL);
     enum pr6_adapter_result retval = PR6_ADAPTER_SUCCESS;    
-    VALUE self = SelfFromWrapper(r);
+    VALUE self = *(VALUE *)ctxt;
 
     VALUE object = rb_hash_aref(rb_iv_get(self, "@objects"), UINT2NUM(arg->objectID));
 

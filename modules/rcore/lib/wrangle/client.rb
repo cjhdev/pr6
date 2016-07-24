@@ -73,6 +73,7 @@ module Wrangle
             end
 
             @responseHandler = responseHandler
+            @counter = nil
             
         end
 
@@ -86,6 +87,10 @@ module Wrangle
             else
                 self.instance_exec(res, &@handler)
             end
+        end
+
+        def outputConfirm(counter)
+            @counter = counter.to_i
         end
 
     end

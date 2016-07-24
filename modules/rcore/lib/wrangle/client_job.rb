@@ -87,11 +87,7 @@ module Wrangle
         end
 
         def receiveMessage(message)
-            if @expectedCounter
-                @client.input(@expectedCounter, message)
-            else
-                raise "haven't register message as sent"
-            end            
+            @client.input(message)
         end
 
         def doTimeout
@@ -110,6 +106,7 @@ module Wrangle
                 else
                     @timeout = time + @retryPeriod
                 end
+                @client.outputConfirm(@expectedCounter)
             end
         end
 

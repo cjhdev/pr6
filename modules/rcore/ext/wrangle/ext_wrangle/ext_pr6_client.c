@@ -19,11 +19,11 @@ static VALUE ConstClient;
 
 /* static function prototypes *****************************************/
 
-static VALUE clientInput(VALUE self, VALUE expectedCounter, VALUE msg);
+static VALUE clientInput(VALUE self, VALUE msg);
 static VALUE clientOutput(int argc, VALUE* argv, VALUE self);
-static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list);
+static void clientResultCallback(void *ctxt, struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list);
 static VALUE resultToSymbol(enum pr6_client_result result);
-static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOnError, VALUE requests);
+static void initClientState(VALUE self, struct pr6_client *r, VALUE confirmed, VALUE breakOnError, VALUE requests, VALUE counter);
 static VALUE clientTimeout(VALUE self);
 static VALUE clientPeekCounter(VALUE self, VALUE msg);
 
@@ -34,10 +34,10 @@ void EXT_PR6_ClientInit(void)
     VALUE wrangle = rb_define_module("Wrangle");
     ConstClient = rb_define_class_under(wrangle, "Client", rb_cObject);
     
-    rb_define_method(ConstClient, "input", clientInput, 2);
+    rb_define_method(ConstClient, "input", clientInput, 1);
     rb_define_method(ConstClient, "output", clientOutput, -1);    
-    rb_define_method(ConstClient, "timeout", clientTimeout, 0);    
-
+    rb_define_method(ConstClient, "timeout", clientTimeout, 0);
+    
     rb_define_module_function(ConstClient, "peekCounter", clientPeekCounter, 1);
     
     rb_require("wrangle/method_response");
@@ -45,17 +45,16 @@ void EXT_PR6_ClientInit(void)
     
     ConstMethodResponse = rb_const_get(wrangle, rb_intern("MethodResponse"));
     ConstMethodRequest = rb_const_get(wrangle, rb_intern("MethodRequest"));    
-    
-    rb_define_alloc_func(ConstClient, StateWrapperAlloc);   
 }
 
 /* static functions ***************************************************/
 
-static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
+static void clientResultCallback(void *ctxt, struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
 {
     uint16_t i;
 
-    VALUE self = SelfFromWrapper(r);
+    VALUE self = *(VALUE *)ctxt;
+
     VALUE resList = rb_ary_new();
     VALUE methods = rb_iv_get(self, "@methods");
 
@@ -102,23 +101,16 @@ static void clientResultCallback(struct pr6_client *r, uint16_t listSize, const 
     }
 }
 
-static VALUE clientInput(VALUE self, VALUE expectedCounter, VALUE msg)
+static VALUE clientInput(VALUE self, VALUE msg)
 {
-    struct pr6_client *r;
+    struct pr6_client r;
 
-    struct state_wrapper *wrapper;
-    Data_Get_Struct(self, struct state_wrapper, wrapper);
-    r = &wrapper->state.client;
-    assert(wrapper->self == self);
-
-    initClientState(r, rb_iv_get(self, "@confirmed"), rb_iv_get(self, "@breakOnError"), rb_iv_get(self, "@methods"));
-
-    expectedCounter = rb_funcall(expectedCounter, rb_intern("to_i"), 0);
+    initClientState(self, &r, rb_iv_get(self, "@confirmed"), rb_iv_get(self, "@breakOnError"), rb_iv_get(self, "@methods"), rb_iv_get(self, "@counter"));
 
     const uint8_t *in = (const uint8_t *)RSTRING_PTR(msg);
     uint32_t inLen = RSTRING_LEN(msg);
 
-    PR6_ClientInput(r, (uint16_t)NUM2UINT(expectedCounter), in, inLen);
+    PR6_ClientInput(&self, &r, in, inLen);
     
     return self;
 }
@@ -126,7 +118,7 @@ static VALUE clientInput(VALUE self, VALUE expectedCounter, VALUE msg)
 static VALUE clientOutput(int argc, VALUE* argv, VALUE self)
 {
     VALUE outMax;
-    struct pr6_client *r;
+    struct pr6_client r;
     uint16_t _outMax = 0xffff;
 
     rb_scan_args(argc, argv, "01", &outMax);
@@ -143,14 +135,9 @@ static VALUE clientOutput(int argc, VALUE* argv, VALUE self)
     
     uint8_t *out = ALLOC_N(uint8_t, _outMax);
 
-    struct state_wrapper *wrapper;
-    Data_Get_Struct(self, struct state_wrapper, wrapper);
-    r = &wrapper->state.client;
-    assert(wrapper->self == self);
-
-    initClientState(r, rb_iv_get(self, "@confirmed"), rb_iv_get(self, "@breakOnError"), rb_iv_get(self, "@methods"));
+    initClientState(self, &r, rb_iv_get(self, "@confirmed"), rb_iv_get(self, "@breakOnError"), rb_iv_get(self, "@methods"), rb_iv_get(self, "@counter"));
     
-    return rb_str_new((const char *)out, PR6_ClientOutput(r, out, _outMax));
+    return rb_str_new((const char *)out, PR6_ClientOutput(&r, out, _outMax));
 }
 
 static VALUE resultToSymbol(enum pr6_client_result result)
@@ -165,7 +152,7 @@ static VALUE resultToSymbol(enum pr6_client_result result)
     return sym;
 }
 
-static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOnError, VALUE requests)
+static void initClientState(VALUE self, struct pr6_client *r, VALUE confirmed, VALUE breakOnError, VALUE requests, VALUE counter)
 {
     uint16_t i;
     uint16_t poolMax = NUM2UINT(rb_funcall(requests, rb_intern("size"), 0));
@@ -199,20 +186,20 @@ static void initClientState(struct pr6_client *r, VALUE confirmed, VALUE breakOn
             }
         }
     }
+
+    if(counter != Qnil){
+
+        PR6_ClientOutputConfirm(&self, r, NUM2UINT(counter)); 
+    }
 }
 
 static VALUE clientTimeout(VALUE self)
 {
-    struct pr6_client *r;
+    struct pr6_client r;
 
-    struct state_wrapper *wrapper;
-    Data_Get_Struct(self, struct state_wrapper, wrapper);
-    r = &wrapper->state.client;
-    assert(wrapper->self == self);
+    initClientState(self, &r, rb_iv_get(self, "@confirmed"), rb_iv_get(self, "@breakOnError"), rb_iv_get(self, "@methods"), rb_iv_get(self, "@counter"));
 
-    initClientState(r, rb_iv_get(self, "@confirmed"), rb_iv_get(self, "@breakOnError"), rb_iv_get(self, "@methods"));
-
-    PR6_ClientTimeout(r);
+    PR6_ClientTimeout(&self, &r);
 
     return self;
 }
@@ -229,4 +216,3 @@ static VALUE clientPeekCounter(VALUE self, VALUE msg)
 
     return retval;
 }
-    
