@@ -65,6 +65,10 @@ void test_PR6_ClientOutput(void)
 
     TEST_ASSERT_EQUAL(sizeof(expectedOut), PR6_ClientOutput(&client, out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
+    
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
+    PR6_ClientOutputConfirm(&client, 0);
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientOutput_multiple(void)
@@ -92,6 +96,10 @@ void test_PR6_ClientOutput_multiple(void)
 
     TEST_ASSERT_EQUAL(sizeof(expectedOut), PR6_ClientOutput(&client, out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
+    PR6_ClientOutputConfirm(&client, 0);
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientOutput_outputTooShort(void)
@@ -105,6 +113,8 @@ void test_PR6_ClientOutput_outputTooShort(void)
     uint8_t out[sizeof(expectedOut)-1];
 
     TEST_ASSERT_EQUAL(0U, PR6_ClientOutput(&client, out, sizeof(out)));
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_INIT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientOutput_retry(void)
@@ -119,9 +129,17 @@ void test_PR6_ClientOutput_retry(void)
 
     TEST_ASSERT_EQUAL(sizeof(expectedOut), PR6_ClientOutput(&client, out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
+    PR6_ClientOutputConfirm(&client, 0);
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
     
     TEST_ASSERT_EQUAL(sizeof(expectedOut), PR6_ClientOutput(&client, out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
+    PR6_ClientOutputConfirm(&client, 0);
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientOutput_nonConfirmed(void)
@@ -148,5 +166,9 @@ void test_PR6_ClientOutput_nonConfirmed(void)
     TEST_ASSERT_EQUAL(sizeof(expectedOut), PR6_ClientOutput(&client, out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
 
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
+    TEST_ASSERT_EQUAL(0, cbResultTouch);
+    PR6_ClientOutputConfirm(&client, 0);
     TEST_ASSERT_EQUAL(1, cbResultTouch);
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_COMPLETE, PR6_ClientState(&client));
 }

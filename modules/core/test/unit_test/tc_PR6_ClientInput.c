@@ -52,6 +52,7 @@ void setUp(void)
     
     PR6_ClientInit(&client, pool, poolMax, confirmed, breakOnError, cbResult, 42, 1, (const uint8_t *)"hello", strlen("hello"));
     PR6_ClientOutput(&client, out, sizeof(out));
+    PR6_ClientOutputConfirm(&client, 0);
 }
 
 void tearDown(void)
@@ -62,31 +63,39 @@ void test_PR6_ClientInput(void)
 {
     const uint8_t input[] = {
         PR6_METHOD_RES,
-            0x00, 0x01,
+            0x00, 0x00,
             PR6_RESULT_SUCCESS,
             strlen("world"), 'w', 'o', 'r', 'l', 'd'
     };
 
 
-    PR6_ClientInput(&client, 0, input, sizeof(input));
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
+
+    PR6_ClientInput(&client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(1U , cbResultTouch);
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_COMPLETE, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientInput_listSizeMismatch(void)
 {
     const uint8_t input[] = {
         PR6_METHOD_RES,
-            0x00, 0x01,
+            0x00, 0x00,
             PR6_RESULT_SUCCESS,
             strlen("world"), 'w', 'o', 'r', 'l', 'd',
             PR6_RESULT_SUCCESS,
             strlen("world"), 'w', 'o', 'r', 'l', 'd'
         };
 
-    PR6_ClientInput(&client, 0, input, sizeof(input));
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
+
+    PR6_ClientInput(&client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientInput_expectedCounterMismatch(void)
@@ -98,23 +107,31 @@ void test_PR6_ClientInput_expectedCounterMismatch(void)
             strlen("world"), 'w', 'o', 'r', 'l', 'd',            
         };
 
-    PR6_ClientInput(&client, 2, input, sizeof(input));
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
+
+    PR6_ClientInput(&client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientInput_padded(void)
 {
     const uint8_t input[] = {
         PR6_METHOD_RES,
-            0x00, 0x01,
+            0x00, 0x00,
             PR6_RESULT_SUCCESS,
             strlen("world"), 'w', 'o', 'r', 'l', 'd', 0x00
         };
 
-    PR6_ClientInput(&client, 0, input, sizeof(input));
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
+    
+    PR6_ClientInput(&client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 
 }
 
@@ -124,47 +141,63 @@ void test_PR6_ClientInput_boundaryCounter(void)
         PR6_METHOD_RES            
     };
 
-    PR6_ClientInput(&client, 0, input, sizeof(input));
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
+
+    PR6_ClientInput(&client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientInput_boundaryResult(void)
 {
     const uint8_t input[] = {
         PR6_METHOD_RES,
-            0x00, 0x01,
+            0x00, 0x00,
     };
 
-    PR6_ClientInput(&client, 0, input, sizeof(input));
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
+    
+    PR6_ClientInput(&client, input, sizeof(input));
 
-    TEST_ASSERT_EQUAL(0U , cbResultTouch);
+    TEST_ASSERT_EQUAL(0U, cbResultTouch);
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientInput_boundaryReturnValueEncoding(void)
 {
     const uint8_t input[] = {
         PR6_METHOD_RES,
-            0x00, 0x01,
+            0x00, 0x00,
             PR6_RESULT_SUCCESS
     };
 
-    PR6_ClientInput(&client, 0, input, sizeof(input));
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
+
+    PR6_ClientInput(&client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientInput_boundaryReturnValue(void)
 {
     const uint8_t input[] = {
         PR6_METHOD_RES,
-            0x00, 0x01,
+            0x00, 0x00,
             PR6_RESULT_SUCCESS,
             strlen("world")
     };
 
-    PR6_ClientInput(&client, 0, input, sizeof(input));
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
+
+    PR6_ClientInput(&client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
+
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 

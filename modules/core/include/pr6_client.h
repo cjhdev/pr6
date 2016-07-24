@@ -56,6 +56,13 @@ enum pr6_client_result {
     PR6_CLIENT_RESULT_TIMEOUT               /**< client request timed out */
 };
 
+enum pr6_client_state {
+    PR6_CLIENT_STATE_INIT = 0,          /**< initialised */
+    PR6_CLIENT_STATE_PENDING,           /**< sent a message, waiting for confirmation it was packaged by supporting layer */
+    PR6_CLIENT_STATE_SENT,              /**< sent a message, confirmed by supporting layer */
+    PR6_CLIENT_STATE_COMPLETE           /**< sent a message, confirmed, got a response */
+};
+
 /* forward declarations ***********************************************/
 
 struct pr6_client;
@@ -89,6 +96,9 @@ struct pr6_client {
     pr6_client_result_fn_t cbResult;         /**< response complete callback */
 
     uint16_t reqLen;    /**< byte length of request serialised from `list` */
+
+    enum pr6_client_state state;
+    uint16_t counter;
 };
 
 /** Binding between Request and Response */
@@ -148,7 +158,7 @@ struct pr6_client *PR6_ClientInit(struct pr6_client *r, struct pr6_client_req_re
 struct pr6_client *PR6_ClientInit_AddMethod(struct pr6_client *r, uint16_t objectID, uint8_t methodIndex, const uint8_t *arg, uint16_t argLen);
 
 /**
- * Initialise a client instance from a request message
+ * Initialise a client instance from earlier output message
  *
  * This is useful if your application stores the messages produced by PR6_ClientOutput but not the client instance itself.
  *
@@ -156,6 +166,7 @@ struct pr6_client *PR6_ClientInit_AddMethod(struct pr6_client *r, uint16_t objec
  * @param[in] param init parameters
  * @param[in] in request message to work backwards from
  * @param[in] inLen byte length of `in`
+ * @param[in] counter optional counter field (if not NULL this will set state to PR6_CLIENT_STATE_SENT)
  *
  * @return #pr5_client pointer to client instance
  *
@@ -163,7 +174,7 @@ struct pr6_client *PR6_ClientInit_AddMethod(struct pr6_client *r, uint16_t objec
  * @retval NULL client instance could not be initialised
  *
  * */
-struct pr6_client *PR6_ClientInit_FromMessage(struct pr6_client *r, struct pr6_client_req_res *pool, uint16_t poolMax, pr6_client_result_fn_t result, const uint8_t *in, uint16_t inLen);
+struct pr6_client *PR6_ClientInit_FromOutput(struct pr6_client *r, struct pr6_client_req_res *pool, uint16_t poolMax, pr6_client_result_fn_t result, const uint8_t *in, uint16_t inLen, uint16_t *counter);
 
 /**
  * Deliver a message to a client instance
@@ -172,12 +183,11 @@ struct pr6_client *PR6_ClientInit_FromMessage(struct pr6_client *r, struct pr6_c
  * @note may call `cbException()` if exception was encountered
  *
  * @param[in] r client instance
- * @param[in] expectedCounter the expected counter value
  * @param[in] in input buffer
  * @param[in] inLen byte length of `in`
  * 
  * */ 
-void PR6_ClientInput(struct pr6_client *r, uint16_t expectedCounter, const uint8_t *in, uint16_t inLen);
+void PR6_ClientInput(struct pr6_client *r, const uint8_t *in, uint16_t inLen);
 
 /**
  * Generate an output message
@@ -192,7 +202,16 @@ void PR6_ClientInput(struct pr6_client *r, uint16_t expectedCounter, const uint8
 uint16_t PR6_ClientOutput(struct pr6_client *r, uint8_t *out, uint16_t outMax);
 
 /**
- * Return true if client was initialised with a confirmable request
+ * Confirm client output with counter value from supporting layers
+ *
+ * @param[in] r client instance
+ * @param[in] counter
+ *
+ * */
+void PR6_ClientOutputConfirm(struct pr6_client *r, uint16_t counter);
+
+/**
+ * Return confirmed?
  *
  * @param[in] r client instance
  * @return ClientIsConfirmed?
@@ -201,14 +220,27 @@ uint16_t PR6_ClientOutput(struct pr6_client *r, uint8_t *out, uint16_t outMax);
 bool PR6_ClientIsConfirmed(const struct pr6_client *r);
 
 /**
- * Return true if client was initialised with a breakOnError request
+ * Return breakOnError?
  *
  * @param[in] r client instance
  * @return ClientIsBreakOnError?
  *
- *
  * */
 bool PR6_ClientIsBreakOnError(const struct pr6_client *r);
+
+/**
+ * Return client instance state
+ *
+ * @param[in] r client instance
+ * @return enum pr6_client_state
+ *
+ * @retval PR6_CLIENT_STATE_INIT
+ * @retval PR6_CLIENT_STATE_PENDING
+ * @retval PR6_CLIENT_STATE_SENT
+ * @retval PR6_CLIENT_STATE_FINISHED
+ *
+ * */
+enum pr6_client_state PR6_ClientState(const struct pr6_client *r);
 
 /**
  * Raise timeout exception

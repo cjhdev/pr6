@@ -53,6 +53,9 @@ void test_PR6_ClientInit(void)
 
     /* assert that confirmed setting can be read from instance */
     TEST_ASSERT_EQUAL(true, PR6_ClientIsConfirmed(&client));
+
+    /* assert that instance state is init */
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_INIT, PR6_ClientState(&client));
 }
 
 void test_PR6_ClientInit_AddMethod(void)
@@ -73,13 +76,17 @@ void test_PR6_ClientInit_AddMethod(void)
 
     /* assert that confirmed setting can be read from instance */
     TEST_ASSERT_EQUAL(true, PR6_ClientIsConfirmed(&client));
+
+    /* assert that instance state is init */
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_INIT, PR6_ClientState(&client));
 }
 
-void test_PR6_ClientInit_FromMessage(void)
+void test_PR6_ClientInit_FromOutput(void)
 {
     struct pr6_client_req_res pool[4U];
     uint16_t poolMax = sizeof(pool) / sizeof(*pool);
-    struct pr6_client client;    
+    struct pr6_client client;
+    uint16_t counter = 1;
     
     const uint8_t msg[] = {
         PR6_METHOD_REQ,
@@ -98,12 +105,27 @@ void test_PR6_ClientInit_FromMessage(void)
     };
 
     /* init from message */
-    TEST_ASSERT_EQUAL_PTR(&client, PR6_ClientInit_FromMessage(&client, pool, poolMax, cbResult, msg, sizeof(msg)));
+    TEST_ASSERT_EQUAL_PTR(&client, PR6_ClientInit_FromOutput(&client, pool, poolMax, cbResult, msg, sizeof(msg), NULL));
 
     /* assert that breakOnError setting can be read from instance */
     TEST_ASSERT_EQUAL(false, PR6_ClientIsBreakOnError(&client));
 
     /* assert that confirmed setting can be read from instance */
     TEST_ASSERT_EQUAL(true, PR6_ClientIsConfirmed(&client));
+
+    /* assert that instance state is init */
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
+
+    /* init from message again with counter */
+    TEST_ASSERT_EQUAL_PTR(&client, PR6_ClientInit_FromOutput(&client, pool, poolMax, cbResult, msg, sizeof(msg), &counter));
+
+    /* assert that breakOnError setting can be read from instance */
+    TEST_ASSERT_EQUAL(false, PR6_ClientIsBreakOnError(&client));
+
+    /* assert that confirmed setting can be read from instance */
+    TEST_ASSERT_EQUAL(true, PR6_ClientIsConfirmed(&client));
+
+    /* assert that instance state is init */
+    TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
