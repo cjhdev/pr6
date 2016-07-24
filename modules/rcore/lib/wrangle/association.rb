@@ -91,9 +91,9 @@ module Wrangle
             cipher = OpenSSL::Cipher.new('aes-128-gcm')
             cipher.decrypt
             cipher.key = @secret
-            cipher.iv = iv
-            cipher.auth_data = aad
+            cipher.iv = iv            
             cipher.auth_tag = mac
+            cipher.auth_data = aad
 
             begin
 
