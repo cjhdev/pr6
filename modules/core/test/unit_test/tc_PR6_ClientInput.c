@@ -26,7 +26,7 @@
 
 int cbResultTouch;
 
-static void cbResult(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
+static void cbResult(void *ctxt, struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
 {
     cbResultTouch++;
 
@@ -52,7 +52,7 @@ void setUp(void)
     
     PR6_ClientInit(&client, pool, poolMax, confirmed, breakOnError, cbResult, 42, 1, (const uint8_t *)"hello", strlen("hello"));
     PR6_ClientOutput(&client, out, sizeof(out));
-    PR6_ClientOutputConfirm(&client, 0);
+    PR6_ClientOutputConfirm(NULL, &client, 0);
 }
 
 void tearDown(void)
@@ -71,7 +71,7 @@ void test_PR6_ClientInput(void)
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 
-    PR6_ClientInput(&client, input, sizeof(input));
+    PR6_ClientInput(NULL, &client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(1U , cbResultTouch);
 
@@ -91,7 +91,7 @@ void test_PR6_ClientInput_listSizeMismatch(void)
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 
-    PR6_ClientInput(&client, input, sizeof(input));
+    PR6_ClientInput(NULL, &client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
 
@@ -109,7 +109,7 @@ void test_PR6_ClientInput_expectedCounterMismatch(void)
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 
-    PR6_ClientInput(&client, input, sizeof(input));
+    PR6_ClientInput(NULL, &client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
 
@@ -127,7 +127,7 @@ void test_PR6_ClientInput_padded(void)
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
     
-    PR6_ClientInput(&client, input, sizeof(input));
+    PR6_ClientInput(NULL, &client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
 
@@ -143,7 +143,7 @@ void test_PR6_ClientInput_boundaryCounter(void)
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 
-    PR6_ClientInput(&client, input, sizeof(input));
+    PR6_ClientInput(NULL, &client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
 
@@ -159,7 +159,7 @@ void test_PR6_ClientInput_boundaryResult(void)
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
     
-    PR6_ClientInput(&client, input, sizeof(input));
+    PR6_ClientInput(NULL, &client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U, cbResultTouch);
 
@@ -176,7 +176,7 @@ void test_PR6_ClientInput_boundaryReturnValueEncoding(void)
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 
-    PR6_ClientInput(&client, input, sizeof(input));
+    PR6_ClientInput(NULL, &client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
 
@@ -194,7 +194,7 @@ void test_PR6_ClientInput_boundaryReturnValue(void)
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 
-    PR6_ClientInput(&client, input, sizeof(input));
+    PR6_ClientInput(NULL, &client, input, sizeof(input));
 
     TEST_ASSERT_EQUAL(0U , cbResultTouch);
 

@@ -282,7 +282,7 @@ struct pr6_client *PR6_ClientInit_AddMethod(struct pr6_client *r, uint16_t objec
     return retval;        
 }
 
-void PR6_ClientInput(struct pr6_client *r, const uint8_t *in, uint16_t inLen)
+void PR6_ClientInput(void *ctxt, struct pr6_client *r, const uint8_t *in, uint16_t inLen)
 {
     uint16_t i;
     uint16_t ret;
@@ -399,7 +399,7 @@ void PR6_ClientInput(struct pr6_client *r, const uint8_t *in, uint16_t inLen)
                                     }
 
                                     r->state = PR6_CLIENT_STATE_COMPLETE;
-                                    r->cbResult(r, r->listSize, r->list);
+                                    r->cbResult(ctxt, r, r->listSize, r->list);
                                 }
                                 else{
 
@@ -484,7 +484,7 @@ uint16_t PR6_ClientOutput(struct pr6_client *r, uint8_t *out, uint16_t outMax)
     return outLen;
 }
 
-void PR6_ClientOutputConfirm(struct pr6_client *r, uint16_t counter)
+void PR6_ClientOutputConfirm(void *ctxt, struct pr6_client *r, uint16_t counter)
 {
     ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
 
@@ -505,7 +505,7 @@ void PR6_ClientOutputConfirm(struct pr6_client *r, uint16_t counter)
             }
 
             r->state = PR6_CLIENT_STATE_COMPLETE;
-            r->cbResult(r, r->listSize, r->list);
+            r->cbResult(ctxt, r, r->listSize, r->list);
         }
     }
 }
@@ -528,7 +528,7 @@ bool PR6_ClientIsBreakOnError(const struct pr6_client *r)
     return r->breakOnError;
 }
 
-void PR6_ClientTimeout(struct pr6_client *r)
+void PR6_ClientTimeout(void *ctxt, struct pr6_client *r)
 {
     ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
 
@@ -541,7 +541,7 @@ void PR6_ClientTimeout(struct pr6_client *r)
             r->list[i].result = PR6_CLIENT_RESULT_TIMEOUT;
         }
         r->state = PR6_CLIENT_STATE_COMPLETE;
-        r->cbResult(r, r->listSize, r->list);
+        r->cbResult(ctxt, r, r->listSize, r->list);
     }
 }
 

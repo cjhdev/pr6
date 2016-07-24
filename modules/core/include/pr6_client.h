@@ -73,7 +73,7 @@ struct pr6_client_req_res;
 /* typedefs ***********************************************************/
 
 /** Used by client instance to notify user thread that request is complete @see EXAMPLE_ClientResultCallback */
-typedef void (*pr6_client_result_fn_t)(struct pr6_client *, uint16_t, const struct pr6_client_req_res *);
+typedef void (*pr6_client_result_fn_t)(void *, struct pr6_client *, uint16_t, const struct pr6_client_req_res *);
 
 /* structs ************************************************************/
 
@@ -182,13 +182,15 @@ struct pr6_client *PR6_ClientInit_FromOutput(struct pr6_client *r, struct pr6_cl
  * Deliver a message to a client instance
  *
  * @note may call `cbResponse()` if complete response has been received
+ * @note `ctxt` is passed through to cbResponse
  *
+ * @param[in] ctxt application specific context
  * @param[in] r client instance
  * @param[in] in input buffer
  * @param[in] inLen byte length of `in`
  * 
  * */ 
-void PR6_ClientInput(struct pr6_client *r, const uint8_t *in, uint16_t inLen);
+void PR6_ClientInput(void *ctxt, struct pr6_client *r, const uint8_t *in, uint16_t inLen);
 
 /**
  * Generate an output message
@@ -205,11 +207,12 @@ uint16_t PR6_ClientOutput(struct pr6_client *r, uint8_t *out, uint16_t outMax);
 /**
  * Confirm output message has been sent
  *
+ * @param[in] ctxt application specific context
  * @param[in] r client instance
  * @param[in] counter this value shall be compared to the counter embedded in response
  *
  * */
-void PR6_ClientOutputConfirm(struct pr6_client *r, uint16_t counter);
+void PR6_ClientOutputConfirm(void *ctxt, struct pr6_client *r, uint16_t counter);
 
 /**
  * Return confirmed?
@@ -246,10 +249,11 @@ enum pr6_client_state PR6_ClientState(const struct pr6_client *r);
 /**
  * Raise timeout exception
  *
+ * @param[in] ctxt application specific context
  * @param[in] r client instance
  *
  * */
-void PR6_ClientTimeout(struct pr6_client *r);
+void PR6_ClientTimeout(void *ctxt, struct pr6_client *r);
 
 /**
  * Peek at response to extract the counter value for correlation to a request

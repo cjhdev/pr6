@@ -32,7 +32,7 @@ void tearDown(void)
 {
 }
 
-static void cbResult(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
+static void cbResult(void *ctxt, struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
 {
 }
 

@@ -29,7 +29,7 @@ int cbResultTouch;
 uint16_t expectedListSize;
 struct pr6_client_req_res *expectedList;
 
-static void cbResult(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
+static void cbResult(void *ctxt, struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
 {
     cbResultTouch++;
     TEST_ASSERT_TRUE(listSize > 0);
@@ -84,7 +84,7 @@ void test_PR6_ClientTimeout(void)
     TEST_ASSERT_TRUE(PR6_ClientOutput(&client, output, sizeof(output)) > 0U);
     
 
-    PR6_ClientTimeout(&client);
+    PR6_ClientTimeout(NULL, &client);
 
     TEST_ASSERT_EQUAL(cbResultTouch, 1);
     

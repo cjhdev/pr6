@@ -26,7 +26,7 @@
 
 int cbResultTouch;
 
-static void cbResult(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
+static void cbResult(void *ctxt, struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list)
 {
     cbResultTouch++;
 
@@ -67,7 +67,7 @@ void test_PR6_ClientOutput(void)
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
     
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
-    PR6_ClientOutputConfirm(&client, 0);
+    PR6_ClientOutputConfirm(NULL, &client, 0);
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
@@ -98,7 +98,7 @@ void test_PR6_ClientOutput_multiple(void)
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
-    PR6_ClientOutputConfirm(&client, 0);
+    PR6_ClientOutputConfirm(NULL, &client, 0);
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
@@ -131,14 +131,14 @@ void test_PR6_ClientOutput_retry(void)
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
-    PR6_ClientOutputConfirm(&client, 0);
+    PR6_ClientOutputConfirm(NULL, &client, 0);
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
     
     TEST_ASSERT_EQUAL(sizeof(expectedOut), PR6_ClientOutput(&client, out, sizeof(out)));
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, sizeof(expectedOut));
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
-    PR6_ClientOutputConfirm(&client, 0);
+    PR6_ClientOutputConfirm(NULL, &client, 0);
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_SENT, PR6_ClientState(&client));
 }
 
@@ -168,7 +168,7 @@ void test_PR6_ClientOutput_nonConfirmed(void)
 
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_PENDING, PR6_ClientState(&client));
     TEST_ASSERT_EQUAL(0, cbResultTouch);
-    PR6_ClientOutputConfirm(&client, 0);
+    PR6_ClientOutputConfirm(NULL, &client, 0);
     TEST_ASSERT_EQUAL(1, cbResultTouch);
     TEST_ASSERT_EQUAL(PR6_CLIENT_STATE_COMPLETE, PR6_ClientState(&client));
 }
