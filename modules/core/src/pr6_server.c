@@ -38,7 +38,7 @@ static void putCounter(uint16_t in, uint8_t *out);
 
 /* functions **********************************************************/
 
-bool PR6_ServerInput(struct pr6_server *r, pr6_server_object_interface_fn_t objectInterface, const uint8_t *role, uint8_t roleSize, uint16_t counter, const uint8_t *in, uint16_t inLen, uint8_t *out, uint16_t *outLen, uint16_t outMax)
+bool PR6_ServerInput(void *ctxt, struct pr6_server *r, pr6_server_object_interface_fn_t objectInterface, const uint8_t *role, uint8_t roleSize, uint16_t counter, const uint8_t *in, uint16_t inLen, uint8_t *out, uint16_t *outLen, uint16_t outMax)
 {
     bool retval = false;
     uint16_t ret;
@@ -155,7 +155,7 @@ bool PR6_ServerInput(struct pr6_server *r, pr6_server_object_interface_fn_t obje
                         r->counter = counter;
 
                         r->state = PR6_SERVER_STATE_BEGIN;
-                        retval = PR6_ServerResume(r, out, outLen, outMax);    
+                        retval = PR6_ServerResume(ctxt, r, out, outLen, outMax);    
                     }
                     else{
 
@@ -185,7 +185,7 @@ bool PR6_ServerInput(struct pr6_server *r, pr6_server_object_interface_fn_t obje
     return retval;
 }
 
-bool PR6_ServerResume(struct pr6_server *r, uint8_t *out, uint16_t *outLen, uint16_t outMax)
+bool PR6_ServerResume(void *ctxt, struct pr6_server *r, uint8_t *out, uint16_t *outLen, uint16_t outMax)
 {
     bool yielding = false;
     enum loopControl { LOOP, BREAK_LOOP } loopState = LOOP;            
@@ -253,7 +253,7 @@ bool PR6_ServerResume(struct pr6_server *r, uint8_t *out, uint16_t *outLen, uint
                     adapter.out = &out[(size_t)*outLen + outOffset];
                     adapter.outMax = outMax - (*outLen + outOffset);
 
-                    retval = r->objectInterface(r, &adapter, &methodResult);
+                    retval = r->objectInterface(ctxt, r, &adapter, &methodResult);
 
                     r->state = PR6_SERVER_STATE_CALL;
 

@@ -290,7 +290,7 @@ uint16_t PR6_ClientList(const struct pr6_client *r, const struct pr6_client_req_
  * @param[in] list pointer to method invocation list
  *
  * */
-void EXAMPLE_ClientResultCallback(struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list);
+void EXAMPLE_ClientResultCallback(void *ctxt, struct pr6_client *r, uint16_t listSize, const struct pr6_client_req_res *list);
 #endif
 
 #ifdef __cplusplus

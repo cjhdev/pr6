@@ -32,7 +32,7 @@ static uint8_t role;
 static uint32_t adapterCalled = 0U;
 static bool yield;
 
-static enum pr6_adapter_result serverObjectInterface(const struct pr6_server *r, struct pr6_server_adapter *arg, enum pr6_result *result)
+static enum pr6_adapter_result serverObjectInterface(void *ctxt, const struct pr6_server *r, struct pr6_server_adapter *arg, enum pr6_result *result)
 {
     adapterCalled++;
 
@@ -119,7 +119,7 @@ void test_PR6_ServerInput(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(3, adapterCalled);
     TEST_ASSERT_EQUAL(sizeof(expOut), outLen);
     TEST_ASSERT_EQUAL_MEMORY(expOut, out, outLen);
@@ -145,11 +145,11 @@ void test_PR6_ServerInput_yield(void)
     uint32_t counter = 1;
 
     yield = true;
-    TEST_ASSERT_EQUAL(true, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(true, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(1, adapterCalled);
 
     yield = false;
-    TEST_ASSERT_EQUAL(false, PR6_ServerResume(&r, out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerResume(NULL, &r, out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(2, adapterCalled);
     TEST_ASSERT_EQUAL(sizeof(expOut), outLen);
     TEST_ASSERT_EQUAL_MEMORY(expOut, out, outLen);
@@ -183,7 +183,7 @@ void test_PR6_ServerInput_NonSuccess(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(3, adapterCalled);
     TEST_ASSERT_EQUAL(sizeof(expOut), outLen);
     TEST_ASSERT_EQUAL_MEMORY(expOut, out, outLen);
@@ -215,7 +215,7 @@ void test_PR6_ServerInput_NonSuccessBOE(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(1, adapterCalled);
     TEST_ASSERT_EQUAL(sizeof(expOut), outLen);
     TEST_ASSERT_EQUAL_MEMORY(expOut, out, outLen);
@@ -247,7 +247,7 @@ void test_PR6_ServerInput_nonSuccessNCBOE(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(1, adapterCalled);
     TEST_ASSERT_EQUAL(0, outLen);
 }
@@ -281,7 +281,7 @@ void test_PR6_ServerInput_NC(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(3, adapterCalled);
     TEST_ASSERT_EQUAL(0, outLen);
 }
@@ -323,7 +323,7 @@ void test_PR6_ServerInput_adapterBufferException(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(3, adapterCalled);
     TEST_ASSERT_EQUAL(sizeof(expOut), outLen);
     TEST_ASSERT_EQUAL_MEMORY(expOut, out, outLen);
@@ -348,7 +348,7 @@ void test_PR6_ServerInput_outMaxBelowMinimum(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(0, adapterCalled);
     TEST_ASSERT_EQUAL(0, outLen);
 }
@@ -363,7 +363,7 @@ void test_PR6_ServerInput_boundaryMethodID(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(0, adapterCalled);
     TEST_ASSERT_EQUAL(0, outLen);
 }
@@ -380,7 +380,7 @@ void test_PR6_ServerInput_boundaryArgumentSizeEncoding(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(0, adapterCalled);
     TEST_ASSERT_EQUAL(0, outLen);
 }
@@ -397,7 +397,7 @@ void test_PR6_ServerInput_boundaryArgument(void)
     uint8_t role[] = {0};
     uint32_t counter = 1;
 
-    TEST_ASSERT_EQUAL(false, PR6_ServerInput(&r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
+    TEST_ASSERT_EQUAL(false, PR6_ServerInput(NULL, &r, serverObjectInterface, role, sizeof(role), counter, in, sizeof(in), out, &outLen, sizeof(out)));
     TEST_ASSERT_EQUAL(0, adapterCalled);
     TEST_ASSERT_EQUAL(0, outLen);
 }

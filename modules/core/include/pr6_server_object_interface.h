@@ -58,7 +58,7 @@ struct pr6_server_adapter;
 /* typedefs ***********************************************************/
 
 /** Server object interface @see EXAMPLE_ServerObjectInterface */
-typedef enum pr6_adapter_result (*pr6_server_object_interface_fn_t)(const struct pr6_server *, struct pr6_server_adapter *, enum pr6_result *);
+typedef enum pr6_adapter_result (*pr6_server_object_interface_fn_t)(void *ctxt, const struct pr6_server *, struct pr6_server_adapter *, enum pr6_result *);
 
 /* structs ************************************************************/
 
@@ -92,7 +92,7 @@ struct pr6_server_adapter {
  * @return #pr6_adapter_result result of calling the adapater
  *
  * */
-enum pr6_adapter_result EXAMPLE_ServerObjectInterface(const struct pr6_server *r, struct pr6_server_adapter *arg, enum pr6_result *result);
+enum pr6_adapter_result EXAMPLE_ServerObjectInterface(void *ctxt, const struct pr6_server *r, struct pr6_server_adapter *arg, enum pr6_result *result);
 
 #endif
 

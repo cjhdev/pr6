@@ -105,7 +105,7 @@ struct pr6_server {
  * @return boolean to indicate serverIsYielding?
  *
  * */
-bool PR6_ServerInput(struct pr6_server *r, pr6_server_object_interface_fn_t objectInterface, const uint8_t *role, uint8_t roleSize, uint16_t counter, const uint8_t *in, uint16_t inLen, uint8_t *out, uint16_t *outLen, uint16_t outMax);
+bool PR6_ServerInput(void *ctxt, struct pr6_server *r, pr6_server_object_interface_fn_t objectInterface, const uint8_t *role, uint8_t roleSize, uint16_t counter, const uint8_t *in, uint16_t inLen, uint8_t *out, uint16_t *outLen, uint16_t outMax);
 
 /**
  * Resume a server that previously yielded
@@ -118,7 +118,7 @@ bool PR6_ServerInput(struct pr6_server *r, pr6_server_object_interface_fn_t obje
 * @return boolean to indicate serverIsYielding?
  * 
  * */
-bool PR6_ServerResume(struct pr6_server *r, uint8_t *out, uint16_t *outLen, uint16_t outMax);
+bool PR6_ServerResume(void *ctxt, struct pr6_server *r, uint8_t *out, uint16_t *outLen, uint16_t outMax);
 
 /**
  * Return true if server previously requested to yield
