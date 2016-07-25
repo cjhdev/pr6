@@ -25,72 +25,10 @@ module Wrangle
 
     class Client
 
-        # @!method initialize(**opts, &block)
-        #
-        #
-        
-        # @!method input(msg)
-        #
-        # Deliver message to client instance
-        #
-        # @param msg [String] message to deliver to client
-        #
-
-        # @!method output(counter, outMax)
-        #
-        # Get message from client instance
-        #
-        # @param outMax [Integer]
-        # @returns [String] message
-        #
-
-        def initialize(requestList, **opts, &responseHandler)
-
-            case opts[:confirmed]
-            when false
-                @confirmed = false
-            else
-                @confirmed = true
-            end
-                
-            @breakOnError = opts[:breakOnError]||false
-            @receiver = opts[:receiver]
-            @methods = []
-
-            requestList.to_a.each do |r|
-                if !r.is_a? MethodRequest
-                    raise ArgumentError.new "expecting requestList to be an array of MethodRequest instances"
-                end
-                @methods << r
-            end
-
-            if requestList.to_a.size == 0
-                raise ArgumentError.new "requestList.size must be greater than zero"
-            end
-
-            if responseHandler.nil?
-                raise ArgumentError.new "must pass &responseHandler"
-            end
-
-            @responseHandler = responseHandler
-            @counter = nil
-            
-        end
-
-        def cancel
-            res = []
-            @methods.each do |req|
-                res.push(MethodResponse(req, PR6_CLIENT_RESULT_CANCELLED))
-            end
-            if @reciever
-                @reciever.instance_exec(res, &@handler)
-            else
-                self.instance_exec(res, &@handler)
-            end
-        end
-
-        def outputConfirm(counter)
-            @counter = counter.to_i
+        def what(arg)
+            puts arg.class
+            puts arg.size
+            puts arg.inspect
         end
 
     end

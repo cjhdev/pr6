@@ -41,25 +41,25 @@ class TestClientJob < Test::Unit::TestCase
 
     end
 
-    def test_sendMessage
+    def test_output
 
         c = ClientJob.new(LOCAL_ID, REMOTE_ID, Queue.new) do
             request(0,0,"hello world")
         end
 
-        assert_equal("\x00\x00\x00\x00\x0bhello world", c.sendMessage(0))
+        assert_equal("\x00\x00\x00\x00\x0bhello world", c.output(0))
         
     end
 
-    def test_registerSent
+    def test_outputConfirm
 
         c = ClientJob.new(LOCAL_ID, REMOTE_ID, Queue.new) do
             request(0,0,"hello world")
         end
-        c.sendMessage(0)
+        c.output(0)
         time = Time.now
 
-        c.registerSent(1, time)
+        c.outputConfirm(1, time)
         
     end
 
@@ -68,11 +68,11 @@ class TestClientJob < Test::Unit::TestCase
         c = ClientJob.new(LOCAL_ID, REMOTE_ID, Queue.new) do
             request(0,0,"hello world")
         end
-        c.sendMessage(0)
+        c.output(0)
         time = Time.now
-        c.registerSent(1, time)
+        c.outputConfirm(1, time)
 
-        c.receiveMessage("\x04\x00\x01\x01".force_encoding("ASCII-8BIT"))
+        c.input("\x04\x00\x01\x01".force_encoding("ASCII-8BIT"))
 
     end
     

@@ -102,6 +102,57 @@ struct pr6_client *PR6_ClientInit(struct pr6_client *r, struct pr6_client_req_re
     return retval;
 }
 
+uint16_t PR6_ClientPeekOutputPoolSize(const uint8_t *in, uint16_t inLen, uint16_t *poolSize)
+{
+    ASSERT(in != NULL)
+    ASSERT(poolSize != NULL)
+
+    uint16_t retval = 0U;
+    uint16_t size;
+    uint16_t ret;
+    uint16_t pos = 0U;
+    enum loopControl { LOOP, BREAK_LOOP } loopState = BREAK_LOOP;
+    
+    if(inLen > 0U){
+
+        pos += PR6_SIZE_TAG;
+
+        while(pos < inLen){
+
+            loopState = BREAK_LOOP;
+
+            if((inLen - pos) >= (PR6_SIZE_METHOD_ID + 1U)){
+
+                pos += PR6_SIZE_METHOD_ID;
+            
+                ret = PR6_GetVint(&in[pos], inLen - pos, &size);
+
+                if(ret > 0){
+
+                    pos += ret;
+
+                    if((inLen - pos) >= size){
+                        
+                        pos += size;
+                        *poolSize++;
+                        loopState = LOOP;                        
+                    }
+                }                
+            }
+
+            if(loopState == BREAK_LOOP){
+                break;
+            }
+        }
+    }
+
+    if((pos == inLen) && (*poolSize > 0U)){
+        retval = pos;
+    }
+
+    return retval;
+}
+
 struct pr6_client *PR6_ClientInit_FromOutput(struct pr6_client *r, struct pr6_client_req_res *pool, uint16_t poolMax, pr6_client_result_fn_t result, const uint8_t *in, uint16_t inLen, uint16_t *counter)
 {
     ASSERT((r != NULL))

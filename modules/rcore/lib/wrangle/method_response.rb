@@ -15,10 +15,7 @@ module Wrangle
             if !req.is_a? MethodRequest
                 raise ArgumentError
             end
-            if !PR6_CLIENT_RESULT.include? result
-                raise ArgumentError
-            end
-
+            
             @req = req
             @result = result
 
@@ -52,6 +49,10 @@ module Wrangle
 
         # @return [nil,String] return value
         attr_reader :returnValue
+
+        def to_human
+            "#{objectID}.#{methodIndex}(#{argument})=#{result} #{returnValue}"
+        end
 
     end
 

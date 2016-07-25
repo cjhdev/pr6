@@ -111,6 +111,7 @@ module Wrangle
             end
 
             @jobs = []
+            @timeoutList = []
             @preJobs = {}
             @messageIndex = {}
 
@@ -128,10 +129,10 @@ module Wrangle
                 :remoteID=>remoteID,
                 :requests=>requests,
                 :responseQueue=>responseQueue,
-                :opts=>opts                
+                :opts=>opts
             })
 
-            responseQueue
+            return responseQueue
    
         end
 
@@ -215,22 +216,22 @@ module Wrangle
                         @preJobs.delete(id)
 
                         # notify application of failure
-                        preJob.doCancel
+                        preJob.forceCancel
 
                         # remove id from list
                         @ids.delete(preJob.id)
 
                         Log::info("#{__method__}: failed to send job #{preJob.id} at #{sendTime}")
                         
-                    # notify job that message has been sent
-                    when :notifySent
+                    # notify job that message has been packed
+                    when :notifyPacked
 
                         Log::debug "#{__method__}: #{input}"
 
                         id = input[:id]
                         counter = input[:counter]
                         sendTime = input[:time]
-
+                        
                         preJob = @preJobs[id]
 
                         if preJob.nil?
@@ -238,7 +239,7 @@ module Wrangle
                         end
 
                         # register the send
-                        preJob.registerSent(counter, sendTime)
+                        preJob.outputConfirm(counter, sendTime)
 
                         # remove from pre-job list
                         @preJobs.delete(id)
@@ -256,14 +257,17 @@ module Wrangle
                             @jobs.delete(index)
                             
                             # notify application that both jobs are cancelled
-                            collision.doCancel
-                            preJob.doCancel
+                            collision.forceCancel
+                            preJob.force.Cancel
                             
                             # remove the ids from @ids list
                             @ids.delete(collision.id)
                             @ids.delete(preJob.id)
 
                         else
+
+                            # send
+                            @outputQueue.push(input[:message])
 
                             # add new job to the active jobs list
                             @jobs[index] = preJob
@@ -307,14 +311,14 @@ module Wrangle
                                         :id=>j.id,
                                         :to=>j.remoteID,
                                         :from=>j.localID, 
-                                        :message=>j.sendMessage,
+                                        :message=>j.output,
                                         :ip =>j.ip,
                                         :port=>j.port
                                     })
 
                                 # shut it down
                                 else
-                                    j.doTimeout
+                                    j.forceTimeout
                                     @ids.delete(j.id)
                                 end
                                 
@@ -385,7 +389,7 @@ module Wrangle
                             :id=>preJob.id,
                             :to=>preJob.remoteID,
                             :from=>preJob.localID, 
-                            :message=>preJob.sendMessage(0),
+                            :message=>preJob.output,
                             :ip => preJob.ip,
                             :port => preJob.port
                         })
@@ -418,19 +422,18 @@ module Wrangle
 
                         if output
                     
-                            @outputQueue.push({                                
-                                :to => to,
-                                :from => from,
-                                :message => output[:data],
-                                :ip => input[:ip],
-                                :port => input[:port]
-                            })
-
                             @processJobQueue.push({
-                                :type=>:notifySent,
+                                :type=>:notifyPacked,
                                 :id=>id,
                                 :time => Time.now,
-                                :counter => output[:counter]
+                                :counter => output[:counter],
+                                :message => {
+                                    :to => to,
+                                    :from => from,
+                                    :message => output[:data],
+                                    :ip => input[:ip],
+                                    :port => input[:port]
+                                }                                
                             })
 
                         else

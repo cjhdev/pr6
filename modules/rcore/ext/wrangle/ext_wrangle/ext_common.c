@@ -19,15 +19,10 @@
  *
  * */
 
-#include "ext_common.h"
-
-#include <malloc.h>
-
 /* externs ************************************************************/
 
 void EXT_PR6_ClientInit(void);
 void EXT_PR6_ServerInit(void);
-
 void EXT_PR6_PeerInit(void);
 
 /* functions **********************************************************/
@@ -38,27 +33,4 @@ void Init_ext_wrangle(void)
     EXT_PR6_ServerInit();
     EXT_PR6_ClientInit();
     EXT_PR6_PeerInit();
-}
-
-VALUE StateWrapperAlloc(VALUE klass)
-{
-    VALUE obj = Qnil;
-    void *ptr = calloc(1, sizeof(struct state_wrapper));
-
-    if(ptr != NULL){
-
-        obj = Data_Wrap_Struct(klass, 0, free, ptr);
-        ((struct state_wrapper *)ptr)->self = obj;
-    }
-    else{
-
-        rb_sys_fail("calloc()");
-    }
-
-    return obj;
-}
-
-VALUE SelfFromWrapper(const void *ptr)
-{
-    return ((struct state_wrapper *)((size_t)ptr - offsetof(struct state_wrapper, state)))->self;
 }

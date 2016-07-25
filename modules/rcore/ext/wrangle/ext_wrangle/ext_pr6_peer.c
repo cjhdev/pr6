@@ -27,7 +27,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include "ext_common.h"
+#include "pr6_peer.h"
 
 /* static variables ***************************************************/
 
@@ -42,10 +42,10 @@ static VALUE ConstAssociationRecord;
 static VALUE peerUnpackMessage(VALUE self, VALUE msg);
 static VALUE peerPackMessage(VALUE self, VALUE remoteID, VALUE msg);
 
-static bool myEncrypt(const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128);
-static bool myDecrypt(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128);
-static bool inputCounter(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter);
-static bool outputCounter(const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter);
+static bool myEncrypt(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128);
+static bool myDecrypt(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128);
+static bool inputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter);
+static bool outputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter);
 
 /* functions **********************************************************/
 
@@ -91,7 +91,7 @@ static VALUE peerUnpackMessage(VALUE self, VALUE msg)
     enum pr6_recipient recipient;
     uint32_t counter;
     
-    outLen = PR6_PeerInput((const uint8_t *)RSTRING_PTR(oEntityID), (uint8_t *)RSTRING_PTR(msg), RSTRING_LEN(msg), out, outMax, &header, &recipient, &counter);
+    outLen = PR6_PeerInput(NULL, (const uint8_t *)RSTRING_PTR(oEntityID), (uint8_t *)RSTRING_PTR(msg), RSTRING_LEN(msg), out, outMax, &header, &recipient, &counter);
 
     if(outLen > 0U){
 
@@ -124,7 +124,7 @@ static VALUE peerPackMessage(VALUE self, VALUE remoteID, VALUE msg)
     uint32_t outLen;
     uint32_t counter;
 
-    outLen = PR6_PeerOutput((const uint8_t *)RSTRING_PTR(oEntityID), (const uint8_t *)RSTRING_PTR(oRemoteID), (const uint8_t *)RSTRING_PTR(msg), RSTRING_LEN(msg), out, outMax, &counter);
+    outLen = PR6_PeerOutput(NULL, (const uint8_t *)RSTRING_PTR(oEntityID), (const uint8_t *)RSTRING_PTR(oRemoteID), (const uint8_t *)RSTRING_PTR(msg), RSTRING_LEN(msg), out, outMax, &counter);
 
     if(outLen > 0U){
 
@@ -136,7 +136,7 @@ static VALUE peerPackMessage(VALUE self, VALUE remoteID, VALUE msg)
     return retval;
 }
 
-static bool myEncrypt(const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128)
+static bool myEncrypt(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128)
 {
     bool result = false;
 
@@ -178,7 +178,7 @@ static bool myEncrypt(const uint8_t *entityID, const uint8_t *remoteID, const ui
     return result;
 }
 
-static bool myDecrypt(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128)
+static bool myDecrypt(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128)
 {
     bool result = false;
 
@@ -221,7 +221,7 @@ static bool myDecrypt(const uint8_t *entityID, const uint8_t *localID, const uin
     return result;
 }
 
-static bool inputCounter(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter)
+static bool inputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter)
 {
     bool result = false;
     
@@ -238,7 +238,7 @@ static bool inputCounter(const uint8_t *entityID, const uint8_t *localID, const 
     return result;    
 }
 
-static bool outputCounter(const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter)
+static bool outputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter)
 {
     bool result = false;
 

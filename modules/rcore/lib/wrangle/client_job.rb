@@ -35,6 +35,7 @@ module Wrangle
         attr_reader :ip
         attr_reader :response
         attr_reader :counter
+        attr_reader :state
         
         DEFAULT_RETRY_MAX = 0
         DEFAULT_RETRY_PERIOD = 0
@@ -76,46 +77,45 @@ module Wrangle
                 @finished = true
             end
 
-            @finished = false
+            @state = @client.state
 
         end
 
-        def sendMessage(maxOut)
+        def output(remoteMax=0)
             @timeout = nil
             @counter = nil
-            @client.output(maxOut)            
+            out = @client.output(remoteMax)
+            @state = @client.state
+            out
         end
 
-        def receiveMessage(message)
-            @client.input(message)
-        end
-
-        def doTimeout
-            @client.timeout
-        end
-
-        def doCancel
-            @client.cancel
-        end
-
-        def registerSent(counter, time)
-            if @counter.nil?
-                @expectedCounter = counter & 0xffff
+        def outputConfirm(counter, time)
+            @counter = counter
+            @client.outputConfirm(counter)
+            if !self.finished?
                 if @retryBackoff
                     @timeout = time + ( @retryPeriod << @retryCount )
                 else
                     @timeout = time + @retryPeriod
                 end
-                @client.outputConfirm(@expectedCounter)
             end
+            @state = @client.state
         end
 
-        def counterMatch?(counter)
-            if @counter
-                @counter == counter
-            else
-                false
-            end
+        def input(message)
+            @client.input(message)
+            @state = @client.state
+            self
+        end
+
+        def forceTimeout
+            @client.timeout
+            @state = @client.state
+        end
+
+        def forceCancel
+            @client.cancel
+            @state = @client.state
         end
 
         def retry?

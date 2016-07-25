@@ -289,6 +289,19 @@ uint16_t PR6_ClientPeekCounter(const uint8_t *in, uint16_t inLen, uint16_t *coun
  * */
 uint16_t PR6_ClientList(const struct pr6_client *r, const struct pr6_client_req_res **list);
 
+
+/**
+ * Peek at a request to count the pool size
+ *
+ * @param[in] in input buffer
+ * @param[in] inLen byte length of `in`
+ * @param[out] poolSize size of pool required to initialise from request string
+ *
+ * @return number of bytes successfully read from `in`
+ *
+ * */
+uint16_t PR6_ClientPeekOutputPoolSize(const uint8_t *in, uint16_t inLen, uint16_t *poolSize);
+
 #ifdef DOXYGEN
 /** An <b>example</b> callback function passed to PR6_ClientInit
  *

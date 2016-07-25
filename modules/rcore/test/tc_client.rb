@@ -87,7 +87,7 @@ class TestClient < Test::Unit::TestCase
         end
 
         assert_equal("\x02\x00\x00\x00\x0bhello world".force_encoding("ASCII-8BIT"), c.output)
-    
+
     end
 
     def test_input
@@ -98,10 +98,8 @@ class TestClient < Test::Unit::TestCase
 
         touch = 0
 
-
         c = Client.new(requestList, recevier: self) do |res|
-            touch = 1
-            
+            touch = 1            
             assert_equal(0, res.first.objectID)
             assert_equal(0, res.first.methodIndex)
             assert_equal("hello world", res.first.argument)
@@ -110,9 +108,10 @@ class TestClient < Test::Unit::TestCase
         end
 
         c.output(30)
+        c.outputConfirm(1)
 
         input = "\x04\x00\x01\x00\x03hey".force_encoding("ASCII-8BIT")
-        c.input(1, input)
+        c.input(input)
 
         assert_equal(1, touch)
         
@@ -130,13 +129,16 @@ class TestClient < Test::Unit::TestCase
             touch = 1
         end
 
-        input = "\x04\x00\x02\x00\x00".force_encoding("ASCII-8BIT")
-        c.input(1, input)
+        c.output(30)
+        c.outputConfirm(1)
 
+        input = "\x04\x00\x02\x00\x00".force_encoding("ASCII-8BIT")
+        c.input(input)
+        
         assert_equal(0, touch)
 
         input = "\x04\x00\x00\x00\x00".force_encoding("ASCII-8BIT")
-        c.input(1, input)
+        c.input(input)
 
         assert_equal(0, touch)
 
@@ -172,6 +174,9 @@ class TestClient < Test::Unit::TestCase
             assert_equal(nil, res.last.returnValue)
 
         end
+
+        c.output(100)
+        c.outputConfirm(1)
                 
         assert_equal(0, touch)
 

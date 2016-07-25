@@ -25,8 +25,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-#include "ext_common.h"
-#include "pr6_encoder_decoder.h"
+#include "pr6_server.h"
 
 /* internal function prototypes ***************************************/
 
@@ -91,10 +90,9 @@ static VALUE serverInput(VALUE self, VALUE counter, VALUE input)
 
 static enum pr6_result symbolToResult(VALUE symbol)
 {
-    VALUE table = rb_const_get(rb_define_module("Wrangle"), rb_intern("PR6_RESULT"));
     uint16_t i;
 
-    static const enum pr6_client_result results[] = {
+    static const enum pr6_result results[] = {
         PR6_RESULT_SUCCESS,
         PR6_RESULT_OBJECT_UNDEFINED,
         PR6_RESULT_METHOD_UNDEFINED,
@@ -104,21 +102,29 @@ static enum pr6_result symbolToResult(VALUE symbol)
         PR6_RESULT_TEMPORARY
     };
 
-    for(i=0; i < 255; i++){
-    
-        VALUE result = rb_ary_entry(table, i);
+    VALUE symbols[] = {
+        ID2SYM(rb_intern("PR6_RESULT_SUCCESS")),
+        ID2SYM(rb_intern("PR6_RESULT_OBJECT_UNDEFINED")),
+        ID2SYM(rb_intern("PR6_RESULT_METHOD_UNDEFINED")),
+        ID2SYM(rb_intern("PR6_RESULT_ACCESS_DENIED")),
+        ID2SYM(rb_intern("PR6_RESULT_ARGUMENT")),
+        ID2SYM(rb_intern("PR6_RESULT_PERMANENT")),
+        ID2SYM(rb_intern("PR6_RESULT_TEMPORARY"))
+    };
 
-        if(result == Qnil){
+    assert((sizeof(results)/sizeof(*results)) == (sizeof(symbols)/sizeof(*symbols)));
 
-            rb_bug("PR6_RESULT is out of alignment with enum pr6_result\n");
-        }
-        else if(result == symbol){
+    for(i=0; i < (sizeof(symbols)/sizeof(*symbols)); i++){
+
+        if(symbols[i] == symbol){
 
             break;
         }
     }
 
-    assert(i < (sizeof(results)/sizeof(*results)));
+    if(i == (sizeof(symbols)/sizeof(*symbols))){
+        rb_bug("cannot recognise PR6_RESULT in symbol form");
+    }
 
     return results[i];
 }
@@ -126,25 +132,26 @@ static enum pr6_result symbolToResult(VALUE symbol)
 static enum pr6_adapter_result symbolToAdapterResult(VALUE symbol)
 {
     enum pr6_adapter_result retval;
-    VALUE table = rb_const_get(rb_define_module("Wrangle"), rb_intern("PR6_ADAPTER_RESULT"));
     uint8_t i = 0;
 
-    for(i=0; i < 255; i++){
-    
-        VALUE result = rb_ary_entry(table, i);
+    VALUE symbols[] = {
+        ID2SYM(rb_intern("PR6_ADAPTER_SUCCESS")),
+        ID2SYM(rb_intern("PR6_ADAPTER_BUFFER")),
+        ID2SYM(rb_intern("PR6_ADAPTER_YIELD"))
+    };
 
-        if(result == Qnil){
+    for(i=0; i < (sizeof(symbols)/sizeof(*symbols)); i++){
 
-            rb_bug("PR6_ADAPTER_RESULT is out of alignment with enum pr6_adapter_result\n");
-        }
-        else if(result == symbol){
+        if(symbols[i] == symbol){
 
             break;
         }
-
-        i++;
     }
-    
+
+    if(i == (sizeof(symbols)/sizeof(*symbols))){
+        rb_bug("cannot recognise PR6_ADAPTER_RESULT in symbol form");
+    }
+
     if(castAdapterResult(i, &retval) == 0U){
 
         rb_bug("impossible");
