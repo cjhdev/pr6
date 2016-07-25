@@ -111,7 +111,7 @@ uint32_t PR6_PeerGetHeader(const uint8_t *in, uint32_t inLen, struct pr6_peer_he
     return pos;
 }
 
-uint16_t PR6_PeerInput(const uint8_t *entityID, uint8_t *in, uint32_t inLen, uint8_t *out, uint16_t outMax, struct pr6_peer_header *header, enum pr6_recipient *recipient, uint32_t *counter)
+uint16_t PR6_PeerInput(void *ctxt, const uint8_t *entityID, uint8_t *in, uint32_t inLen, uint8_t *out, uint16_t outMax, struct pr6_peer_header *header, enum pr6_recipient *recipient, uint32_t *counter)
 {
     ASSERT((magic == PR6_PEER_MAGIC))
     ASSERT((entityID != NULL))
@@ -139,9 +139,9 @@ uint16_t PR6_PeerInput(const uint8_t *entityID, uint8_t *in, uint32_t inLen, uin
 
                 makeIV(m.from, m.counter, iv);
             
-                if(decrypt(entityID, m.to, m.from, iv, (uint8_t)sizeof(iv), m.payload, m.payloadLen, m.aad, m.aadLen, m.mac128)){
+                if(decrypt(ctxt, entityID, m.to, m.from, iv, (uint8_t)sizeof(iv), m.payload, m.payloadLen, m.aad, m.aadLen, m.mac128)){
 
-                    if(inputCounter(entityID, m.to, m.from, m.counter)){                                
+                    if(inputCounter(ctxt, entityID, m.to, m.from, m.counter)){                                
 
                         if(in == out){
 
@@ -203,7 +203,7 @@ uint16_t PR6_PeerInput(const uint8_t *entityID, uint8_t *in, uint32_t inLen, uin
     return retval;
 }
 
-uint32_t PR6_PeerOutput(const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *in, uint16_t inLen, uint8_t *out, uint32_t outMax, uint32_t *counter)
+uint32_t PR6_PeerOutput(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *in, uint16_t inLen, uint8_t *out, uint32_t outMax, uint32_t *counter)
 {
     ASSERT((magic == PR6_PEER_MAGIC))
     ASSERT((entityID != NULL))
@@ -221,7 +221,7 @@ uint32_t PR6_PeerOutput(const uint8_t *entityID, const uint8_t *remoteID, const 
         
         if(outMax >= (PR6_SIZE_GCM_OVERHEAD + inLen)){
 
-            if(outputCounter(entityID, remoteID, counter)){
+            if(outputCounter(ctxt, entityID, remoteID, counter)){
 
                 makeIV(entityID, *counter, iv);
 
@@ -235,7 +235,7 @@ uint32_t PR6_PeerOutput(const uint8_t *entityID, const uint8_t *remoteID, const 
         
                     if(ret > 0U){
                     
-                        if(encrypt(entityID, remoteID, iv, (uint8_t)sizeof(iv), m.payload, m.payloadLen, m.aad, m.aadLen, m.mac128) == false){
+                        if(encrypt(ctxt, entityID, remoteID, iv, (uint8_t)sizeof(iv), m.payload, m.payloadLen, m.aad, m.aadLen, m.mac128) == false){
 
                             DEBUG("could not encrypt output")
                             retval = 0U;

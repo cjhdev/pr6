@@ -30,24 +30,24 @@ static bool testInputCounterResult;
 static bool testEncryptResult;
 static bool testDecryptResult;
 
-static bool testOutputCounter(const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter)
+static bool testOutputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter)
 {
     *counter = 1;
     return testOutputCounterResult;
 }
 
-static bool testInputCounter(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter)
+static bool testInputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter)
 {
     return testInputCounterResult;
 }
 
-static bool testEncrypt(const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128)
+static bool testEncrypt(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128)
 {
     memset(mac128, 0xff, PR6_SIZE_GCM_MAC128);
     return testEncryptResult;
 }
 
-static bool testDecrypt(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128)
+static bool testDecrypt(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128)
 {    
     return testDecryptResult;
 }
@@ -97,7 +97,7 @@ void test_PR6_PeerOuput(void)
     uint32_t retval;
     uint32_t counter;
     
-    retval = PR6_PeerOutput(entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
+    retval = PR6_PeerOutput(NULL, entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
     
     TEST_ASSERT_EQUAL(sizeof(expectedOut), retval);
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, retval);     
@@ -117,7 +117,7 @@ void test_PR6_PeerOuput_inputTooShort(void)
     uint32_t retval;
     uint32_t counter;
     
-    retval = PR6_PeerOutput(entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
+    retval = PR6_PeerOutput(NULL, entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
     
     TEST_ASSERT_EQUAL(0U, retval);    
 }
@@ -149,7 +149,7 @@ void test_PR6_PeerOuput_outputBufferTooShort(void)
     uint32_t retval;
     uint32_t counter;
     
-    retval = PR6_PeerOutput(entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
+    retval = PR6_PeerOutput(NULL, entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
     
     TEST_ASSERT_EQUAL(0U, retval);    
 }
@@ -183,7 +183,7 @@ void test_PR6_PeerOuput_outputCounterFailure(void)
     uint32_t retval;
     uint32_t counter;
     
-    retval = PR6_PeerOutput(entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
+    retval = PR6_PeerOutput(NULL, entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
     
     TEST_ASSERT_EQUAL(0U, retval);    
 }
@@ -217,7 +217,7 @@ void test_PR6_PeerOuput_encryptionFailure(void)
     uint32_t retval;
     uint32_t counter;
     
-    retval = PR6_PeerOutput(entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
+    retval = PR6_PeerOutput(NULL, entityID, remoteID, in, sizeof(in), out, sizeof(out), &counter);
     
     TEST_ASSERT_EQUAL(0U, retval);    
 }

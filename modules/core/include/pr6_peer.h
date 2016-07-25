@@ -42,16 +42,16 @@ extern "C" {
 /* typedefs ***********************************************************/
 
 /** called to get the next output counter for a given association @see EXAMPLE_SM_OutputCounter */
-typedef bool (*pr6_sm_output_counter_fn_t)(const uint8_t *, const uint8_t *, uint32_t *);
+typedef bool (*pr6_sm_output_counter_fn_t)(void *, const uint8_t *, const uint8_t *, uint32_t *);
 
 /** called to input an input counter for a given association @see EXAMPLE_SM_InputCounter */
-typedef bool (*pr6_sm_input_counter_fn_t)(const uint8_t *, const uint8_t *, const uint8_t *, uint32_t);
+typedef bool (*pr6_sm_input_counter_fn_t)(void *, const uint8_t *, const uint8_t *, const uint8_t *, uint32_t);
 
 /** called to encrypt and authenticate in-place for a given association @see EXAMPLE_SM_Encrypt */
-typedef bool (*pr6_sm_encrypt_fn_t)(const uint8_t *, const uint8_t *, const uint8_t *, uint8_t, uint8_t *, uint16_t, const uint8_t *, uint32_t, uint8_t *);
+typedef bool (*pr6_sm_encrypt_fn_t)(void *, const uint8_t *, const uint8_t *, const uint8_t *, uint8_t, uint8_t *, uint16_t, const uint8_t *, uint32_t, uint8_t *);
 
 /** called to decrypt and authenticate in-place for a given association @see EXAMPLE_SM_Decrypt */
-typedef bool (*pr6_sm_decrypt_fn_t)(const uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *, uint8_t, uint8_t *, uint16_t, const uint8_t *, uint32_t, const uint8_t *);
+typedef bool (*pr6_sm_decrypt_fn_t)(void *, const uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *, uint8_t, uint8_t *, uint16_t, const uint8_t *, uint32_t, const uint8_t *);
 
 /* structures *********************************************************/
 
@@ -90,7 +90,7 @@ struct pr6_peer_header {
  * @return number of bytes successfully written to `out`
  * 
  * */
-uint16_t PR6_PeerInput(const uint8_t *entityID, uint8_t *in, uint32_t inLen, uint8_t *out, uint16_t outMax, struct pr6_peer_header *header, enum pr6_recipient *recipient, uint32_t *counter);
+uint16_t PR6_PeerInput(void *ctxt, const uint8_t *entityID, uint8_t *in, uint32_t inLen, uint8_t *out, uint16_t outMax, struct pr6_peer_header *header, enum pr6_recipient *recipient, uint32_t *counter);
 
 /**
  * Send a Message to a remote peer
@@ -108,7 +108,7 @@ uint16_t PR6_PeerInput(const uint8_t *entityID, uint8_t *in, uint32_t inLen, uin
  * @return number of bytes successfully written to `out`
  * 
  * */
-uint32_t PR6_PeerOutput(const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *in, uint16_t inLen, uint8_t *out, uint32_t outMax, uint32_t *counter);
+uint32_t PR6_PeerOutput(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *in, uint16_t inLen, uint8_t *out, uint32_t outMax, uint32_t *counter);
 
 /**
  * Initialise platform specific function pointers
@@ -148,7 +148,7 @@ uint32_t PR6_PeerGetHeader(const uint8_t *in, uint32_t inLen, struct pr6_peer_he
  * @retval false counter value cannot be provided
  *
  * */
-bool EXAMPLE_SM_OutputCounter(const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter);
+bool EXAMPLE_SM_OutputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter);
 
 /**
  * <b>Example</b> of an interface to test and input an input counter value 
@@ -164,7 +164,7 @@ bool EXAMPLE_SM_OutputCounter(const uint8_t *entityID, const uint8_t *remoteID, 
  * @retval false counter value is not acceptable
  *
  * */
-bool EXAMPLE_SM_InputCounter(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter);
+bool EXAMPLE_SM_InputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter);
 
 /**
  * <b>Example</b> of an interface to perform in-place encryption on message elements
@@ -185,7 +185,7 @@ bool EXAMPLE_SM_InputCounter(const uint8_t *entityID, const uint8_t *localID, co
  * @retval false operation was not successful
  *
  * */
-bool EXAMPLE_SM_Encrypt(const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128);
+bool EXAMPLE_SM_Encrypt(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128);
 
 /**
  * <b>Example</b> of an interface to perform in-place decryption on message elements
@@ -207,7 +207,7 @@ bool EXAMPLE_SM_Encrypt(const uint8_t *entityID, const uint8_t *remoteID, const 
  * @retval false operation was not successful
  *
  * */
-bool EXAMPLE_SM_Decrypt(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128);
+bool EXAMPLE_SM_Decrypt(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128);
 #endif
 
 #ifdef __cplusplus

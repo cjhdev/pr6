@@ -30,23 +30,23 @@ static bool testInputCounterResult;
 static bool testEncryptResult;
 static bool testDecryptResult;
 
-static bool testOutputCounter(const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter)
+static bool testOutputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, uint32_t *counter)
 {
     *counter = 1;
     return testOutputCounterResult;
 }
 
-static bool testInputCounter(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter)
+static bool testInputCounter(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, uint32_t counter)
 {
     return testInputCounterResult;
 }
 
-static bool testEncrypt(const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128)
+static bool testEncrypt(void *ctxt, const uint8_t *entityID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, uint8_t *mac128)
 {
     return testEncryptResult;
 }
 
-static bool testDecrypt(const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128)
+static bool testDecrypt(void *ctxt, const uint8_t *entityID, const uint8_t *localID, const uint8_t *remoteID, const uint8_t *iv, uint8_t ivLen, uint8_t *text, uint16_t textLen, const uint8_t *aad, uint32_t aadLen, const uint8_t *mac128)
 {
     return testDecryptResult;
 }
@@ -104,7 +104,7 @@ void test_PR6_PeerInput(void)
         {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff},
     };
     
-    retval = PR6_PeerInput(entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
+    retval = PR6_PeerInput(NULL, entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
     
     TEST_ASSERT_EQUAL(sizeof(expectedOut), retval);
     TEST_ASSERT_EQUAL_MEMORY(expectedOut, out, retval);     
@@ -140,7 +140,7 @@ void test_PR6_PeerInput_clientRecipient(void)
     uint32_t counter;
     struct pr6_peer_header header;
     
-    retval = PR6_PeerInput(entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
+    retval = PR6_PeerInput(NULL, entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
     
     TEST_ASSERT_EQUAL(sizeof(expectedOut), retval);
     TEST_ASSERT_EQUAL(PR6_RECIPIENT_CLIENT, recipient);     
@@ -175,7 +175,7 @@ void test_PR6_PeerInput_messageTooShort(void)
     uint32_t counter;
     struct pr6_peer_header header;
     
-    retval = PR6_PeerInput(entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
+    retval = PR6_PeerInput(NULL, entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
     
     TEST_ASSERT_EQUAL(0, retval);;            
 }
@@ -208,7 +208,7 @@ void test_PR6_PeerInput_decryptFailure(void)
     uint32_t counter;
     struct pr6_peer_header header;
     
-    retval = PR6_PeerInput(entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
+    retval = PR6_PeerInput(NULL, entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
     
     TEST_ASSERT_EQUAL(0, retval);    
 }
@@ -241,7 +241,7 @@ void test_PR6_PeerInput_inputCounterFailure(void)
     uint32_t counter;
     struct pr6_peer_header header;
     
-    retval = PR6_PeerInput(entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
+    retval = PR6_PeerInput(NULL, entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
     
     TEST_ASSERT_EQUAL(0, retval);    
 }
@@ -275,7 +275,7 @@ void test_PR6_PeerInput_unknownPayloadTag(void)
     uint32_t counter;
     struct pr6_peer_header header;
     
-    retval = PR6_PeerInput(entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
+    retval = PR6_PeerInput(NULL, entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
     
     TEST_ASSERT_EQUAL(0, retval);    
 }
@@ -309,7 +309,7 @@ void test_PR6_PeerInput_outputBufferTooShort(void)
     uint32_t counter;
     struct pr6_peer_header header;
     
-    retval = PR6_PeerInput(entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
+    retval = PR6_PeerInput(NULL, entityID, in, sizeof(in), out, sizeof(out), &header, &recipient, &counter);
     
     TEST_ASSERT_EQUAL(0, retval);    
 }
