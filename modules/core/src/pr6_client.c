@@ -545,6 +545,23 @@ void PR6_ClientTimeout(void *ctxt, struct pr6_client *r)
     }
 }
 
+void PR6_ClientCancel(void *ctxt, struct pr6_client *r)
+{
+    ASSERT(((r != NULL) && (r->magic == CLIENT_STATE_MAGIC)))
+
+    uint16_t i;
+
+    if(r->state > PR6_CLIENT_STATE_INIT){
+
+        for(i=0U; i < r->listSize; i++){
+
+            r->list[i].result = PR6_CLIENT_RESULT_CANCEL;
+        }
+        r->state = PR6_CLIENT_STATE_COMPLETE;
+        r->cbResult(ctxt, r, r->listSize, r->list);
+    }
+}
+
 uint16_t PR6_ClientPeekCounter(const uint8_t *in, uint16_t inLen, uint16_t *counter)
 {
     uint16_t pos = 0U;

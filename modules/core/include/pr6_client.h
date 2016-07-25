@@ -54,7 +54,8 @@ enum pr6_client_result {
     PR6_CLIENT_RESULT_PERMANENT,            /**< method invocation failed for permanent reason */
     PR6_CLIENT_RESULT_TEMPORARY,            /**< method invocation failed for temporary reason (try again for different result) */
     PR6_CLIENT_RESULT_MISSING,              /**< client expected a result but was not given one */     
-    PR6_CLIENT_RESULT_TIMEOUT               /**< client request timed out */
+    PR6_CLIENT_RESULT_TIMEOUT,              /**< client request timed out */
+    PR6_CLIENT_RESULT_CANCEL,               /**< client request cancelled by client */
 };
 
 /** a client instance shall be in one of the following states */
@@ -254,6 +255,15 @@ enum pr6_client_state PR6_ClientState(const struct pr6_client *r);
  *
  * */
 void PR6_ClientTimeout(void *ctxt, struct pr6_client *r);
+
+/**
+ * Cancel an active request
+ *
+ * @param[in] ctxt application specific context
+ * @param[in] r client instance
+ *
+ * */
+void PR6_ClientCancel(void *ctxt, struct pr6_client *r);
 
 /**
  * Peek at response to extract the counter value for correlation to a request
