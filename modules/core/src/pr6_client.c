@@ -134,6 +134,7 @@ struct pr6_client *PR6_ClientInit_FromOutput(struct pr6_client *r, struct pr6_cl
             r->state = PR6_CLIENT_STATE_PENDING;
         }
         else{
+            r->counter = *counter;
             r->state = PR6_CLIENT_STATE_SENT;
         }
         
