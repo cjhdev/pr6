@@ -345,7 +345,7 @@ module Wrangle
 
                         if job
 
-                            job.receiveMessage(message)
+                            job.input(message)
 
                             if job.finished?
 
