@@ -170,7 +170,7 @@ static enum pr6_adapter_result serverObjectInterface(void *ctxt, const struct pr
 
     if(object != Qnil){
 
-        VALUE callResult = rb_funcall(object, rb_intern("callMethod"), 3, self, UINT2NUM(arg->methodIndex), rb_str_new((const char *)arg->in, arg->inLen));
+        VALUE callResult = rb_funcall(object, rb_intern("invoke"), 4, self, rb_funcall(rb_iv_get(self, "@association"), rb_intern("assignedRole"), 0), UINT2NUM(arg->methodIndex), rb_str_new((const char *)arg->in, arg->inLen));
 
         retval = symbolToAdapterResult(rb_hash_aref(callResult, ID2SYM(rb_intern("adapterResult"))));
 

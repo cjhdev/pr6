@@ -26,8 +26,8 @@ class TestServer < Test::Unit::TestCase
 
     include Wrangle
 
-    class TestObjectCID0000 < ObjectClass
-        defineMethod "test"
+    class TestClass < ObjectClass
+        m "test"
     end
 
     class MockAssociation
@@ -43,8 +43,8 @@ class TestServer < Test::Unit::TestCase
 
     def setup
 
-        myObj = TestObjectCID0000.new(0) do
-            defineMethodHandler("test", [:public]) do |argument|
+        myObj = TestClass.new(0) do
+            m("test", role: [:public]) do |argument|
                 argument 
             end            
         end

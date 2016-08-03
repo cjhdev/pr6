@@ -24,65 +24,51 @@ module Wrangle
 
     class MethodHandlerResult < Exception
     end
-    class MethodHandlerPause < Exception
-    end
     
     class ObjectClass
 
-        @objects = {}
+        VERSIONED_NAME_REGEX = /^(?<name>([A-Z][A-Za-z0-9]*))V(?<version>[0-9]+)$/
+        NAME_REGEX = /^(?<name>([A-Z][A-Za-z0-9]*))$/
 
-        VERSIONED_NAME_REGEX = /^(?<name>([A-Z][A-Za-z0-9]*))CID(?<classID>[0-9a-fA-F]{4})V(?<version>[0-9]+)$/
-        NAME_REGEX = /^(?<name>([A-Z][A-Za-z0-9]*))CID(?<classID>[0-9a-fA-F]{4})$/
-
-        def self.inherited(subclass)
-
+        def self.inherited(subclass)            
             subclass.defineClass
-            super
-            
         end
 
+        # used to initialise an ObjectClass subclass
         def self.defineClass
-
             name = self.name.split('::').last
             match = VERSIONED_NAME_REGEX.match(name)
 
             if match
-
+            
                 @classVersion = match[:version].to_i
-                @className = match[:name]
-                @classID = match[:classID]                
+                @className = match[:name].to_s
 
             else
 
                 match = NAME_REGEX.match(name)
 
                 if match
-
                     @classVersion = 0
-                    @className = match[:name]
-                    @classID = match[:classID]
-
+                    @className = match[:name].to_s
                 else
-
                     raise "class name '#{name}' must be meet requirements"
-
                 end
 
             end
 
-            if @classVersion > CLASS_VERSION_MAX; raise ArgumentError.new "classVersion must be an Integer in the range (0..#{CLASS_VERSION_MAX})" end
+            if @classVersion > CLASS_VERSION_MAX
+                raise ArgumentError.new "classVersion must be an Integer in the range (0..#{CLASS_VERSION_MAX})"
+            end
 
-            @methodByName = {}
-            @methodByIndex = {}
-
+            @methods = {}       
         end
 
-    
         # Attach a text description to the class
         #
         # @param description [String] description of class
         # @return [String]
-        def self.classDescription(description)
+        def self.desc(description)
             @description = description
         end
 
@@ -91,56 +77,30 @@ module Wrangle
             @className
         end
 
-        # @return [Integer] Class Identifier
-        def self.classID
-            @classID
-        end
-
         # @return [Integer] Class Version
         def self.classVersion
             @classVersion
         end
 
-        # @param methodName [String] optional methodName
-        #
-        # @return [Hash] table of methods indexed by method name
-        # @return [Hash] method description if methodName specified
-        def self.methodByName(methodName=nil)
-
-            if methodName                
-                @methodByName[methodName]
+        # @param index [Integer,String] Method Index or Method Name
+        # @return [Hash] method parameters
+        def self.definedMethods(index)
+            if index.kind_of? Integer
+                @methods.values.detect do |v|
+                    v[:methodIndex] == index
+                end
             else
-                @methodByName
+                @methods[index.to_s]
             end
-
         end
-        
-        # @return [Hash] table of methods indexed by method id
-        def self.methodByIndex(methodIndex=nil)
 
-            if methodIndex                
-                @methodByName[methodIndex]
-            else
-                @methodByIndex
-            end
-
-        end
-                
         # @return [Integer] Object Identifier for this object
         attr_reader :objectID
-
-        # @return [Integer] Object Name for this object
-        attr_reader :objectName
 
         # @return [String] Class Name
         def className
             self.class.className
-        end
-
-        # @return [Integer] Class Identifier
-        def classID
-            self.class.classID
-        end        
+        end  
 
         # @return [Integer] Class Version
         def classVersion
@@ -149,25 +109,21 @@ module Wrangle
 
         # @param objectID [Integer] unique ObjectIdentifier
         # @param objectName [String, nil] optional human readable name for instance
-        def initialize(objectID, objectName=nil, &handlers)
+        def initialize(objectID, **opts, &handlers)
 
-            if self.class.is_a? ObjectClass; raise Exception "may only instanciate a subclass of ObjectClass" end
-            if self.classID.nil?; raise Exception "This class definition is incomplete (needs a classDefinition)" end
-
-            if !objectID.is_a? Integer or objectID > OBJECT_ID_MAX; raise ArgumentError.new "objectID '#{objectID}' is not [Integer] in range (0..#{OBJECT_ID_MAX})" end
-            if !objectName.nil? and !objectName.is_a? String; raise ArgumentError.new "objectName '#{objectName}' is not [String, nil]" end
-
-            @objectID = objectID
-            @objectName = objectName
-            @method = {}
-
-            instance_eval(&handlers)
+            if !Range.new(0, OBJECT_ID_MAX).include? objectID.to_i
+                raise ArgumentError
+            end            
+            @objectID = objectID.to_i
+            @methods = {}
+            self.instance_eval(&handlers)
             
         end
 
-        # Call a method
+        # Invoke a method
         #
         # @param caller [Server] the calling server instance
+        # @param assignedRole [Array] the role assigned to the caller
         # @param methodIndex [Integer] method identifier
         # @param argument [String] method invocation argument
         #
@@ -177,15 +133,15 @@ module Wrangle
         # @option adapterResult [Symbol] :result
         # @option adapterResult [String] :returnValue
         #
-        def callMethod(caller, methodIndex, argument)
+        def invoke(caller, assignedRole, methodIndex, argument)
     
-            if @method[methodIndex]
+            if @methods[methodIndex.to_i]
 
-                if (@method[methodIndex][:role] & caller.association.assignedRole.to_a).size > 0
+                if (@methods[methodIndex.to_i][:role] & assignedRole.to_a).size > 0
 
                     begin
 
-                        retval = self.instance_exec(argument, &@method[methodIndex][:handler])
+                        retval = self.instance_exec(argument, &@methods[methodIndex][:handler])
                         if retval.nil?
                             retval = ""
                         end
@@ -195,10 +151,6 @@ module Wrangle
                     rescue MethodHandlerResult => ex
 
                         { :adapterResult => :PR6_ADAPTER_SUCCESS, :result => ex.message.to_sym }
-
-                    rescue MethodHandlerPause
-
-                        { :adapterResult => :PR6_ADAPTER_YIELD }
 
                     rescue
 
@@ -223,80 +175,75 @@ module Wrangle
         ################################################################
         private_class_method
 
-            # method definition 
+            # define a method
             #
             # @param methodName [String] name of this method
             # @param opts [Hash] method definition options
             #
             # @options opts [Integer] :methodIndex optional explicit Method Identifier
             #
-            def self.defineMethod(methodName, opts = {})
+            def self.m(methodName, **opts)
 
-                methodIndex = opts[:methodIndex]
+                if @methods[methodName.to_s].nil?
 
-                if !methodName.is_a? String; raise ArgumentError.new "methodName '#{methodName}' is not [String]"end
-                if !methodIndex.nil? and ( !methodIndex.is_a? Integer or methodIndex > METHOD_INDEX_MAX); raise ArgumentError.new "opts[:methodIndex] '#{methodIndex}' is not [Integer] in range (0..#{METHOD_INDEX_MAX})" end
-                
-                if methodIndex.nil?
+                    methodIndex = opts[:methodIndex]
 
-                    if @methodByIndex.size == 0; methodIndex = 0 else methodIndex = @methodByIndex.keys.last + 1 end
+                    if methodIndex
+                        if !Range.new(0, METHOD_INDEX_MAX).include? methodIndex.to_i
+                            raise ArgumentError
+                        end
+                        if methods[methodIndex.to_i]
+                            raise
+                        end
+                    else
+                        if @methods.size == 0
+                            methodIndex = 0
+                        else
+                            methodIndex = (@methods.values.map{ |v| v[:methodIndex] }.to_set ^ Range.new(0, METHOD_INDEX_MAX).to_set).first
+                            if methodIndex.nil?
+                                raise Exception "Implicitly allocated methodIndex is exhausted at method definition '#{methodName}'"
+                            end
+                        end
+                    end
 
-                    if methodIndex > METHOD_INDEX_MAX; raise Exception "Implicitly allocated methodIndex is exhausted at method definition '#{methodName}'" end
+                    @methods[methodName.to_s] = {
+                        :methodName => methodName.to_s,
+                        :methodIndex => methodIndex,
+                        :description => opts[:desc],
+                        :argument => opts[:argument],
+                        :returnValue => opts[:returnValue]
+                    }
 
                 else
-
-                    if !methodByIndex[methodIndex].nil?; raise Exception "opts[:methodIndex] `#{methodIndex}` is already allocated to method `#{@methodByIndex[methodIndex][:methodName]}`" end
-
+                    raise ArgumentError.new "Method '#{methodName}' has already been defined for this Class"
                 end
-
-                if @methodByName[methodName]; raise "Method '#{methodName}' is already defined" end
-
-                @methodByName[methodName] = {
-                    :methodName => methodName,
-                    :methodIndex => methodIndex,
-                    :description => opts[:description],
-                    :argument => opts[:argument],
-                    :returnValue => opts[:returnValue]
-                }
-
-                @methodByIndex[methodIndex] = @methodByName[methodName]
 
             end
 
             
+            
         ################################################################
         private
 
-
+            # define a method handler
+            #
             # @param methodName [String] name of the method as defined in class
-            # @param role [Array<Symbol>] array of roles permitted to invoke this method
-            # @param block [Block] method implementation
-            def defineMethodHandler(methodName, role, &handler)
+            # @param handler [Block] the method handler
+            def m(methodName, **opts, &handler)
 
-                if !methodName.is_a? String; raise ArgumentError.new "methodName must be a String" end
-                if !role.is_a? Array; raise ArgumentError.new "role must be an Array of zero or more Symbols" end
-
-                methodDef = self.class.methodByName[methodName]
+                methodDef = self.class.definedMethods(methodName.to_s)
 
                 if methodDef
 
-                    if @method[methodDef[:methodIndex]]
-
-                        raise "`#{methodName}` handler is already defined for this object"
-
-                    else
-
-                        @method[methodDef[:methodIndex]] = {
-                            :handler => handler,
-                            :role => role
-                        }
-
-                    end
+                    @methods[methodDef[:methodIndex]] = {
+                        :methodIndex => methodDef[:methodIndex],
+                        :methodName => methodName.to_s,
+                        :handler => handler,
+                        :role => opts[:role]||[]
+                    }
 
                 else
-
-                    raise "methodName \'#{methodName}\' is not defined in class `#{@objectClass.className}`"
-
+                    raise "cannot define method handler for undefined method"
                 end
                 
             end
@@ -314,10 +261,6 @@ module Wrangle
             # Called by #methodHandler to halt execution for unspecified temporary failure condition
             def haltForTemporary
                 raise MethodHandlerResult.new :PR6_RESULT_TEMPORARY
-            end
-
-            def pause
-                raise MethodHandlerPause
             end
 
     end

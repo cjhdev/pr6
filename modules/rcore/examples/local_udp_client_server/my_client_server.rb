@@ -34,14 +34,14 @@ Wrangle::AssociationRecord.create(
 )
 
 # define a class called echo with one method of the same name
-class EchoCID0000 < Wrangle::ObjectClass
-    defineMethod "echo"    
+class Echo < Wrangle::ObjectClass
+    m "echo"    
 end
 
 # insert and instance of echo into an object list
 serverObjectList = []
-serverObjectList << EchoCID0000.new(OBJECT_ID) do
-    defineMethodHandler("echo", [:public]) do |arg|        
+serverObjectList << Echo.new(OBJECT_ID) do
+    m "echo", role: [:public] do |arg|        
         arg
     end
 end
@@ -55,6 +55,29 @@ client = Wrangle::UDPNode.new(CLIENT_ENTITY_ID)
 puts "server operating on port #{server.port}"
 puts "client operating on port #{client.port}"
 
+# at the same time, server will try to talk to client (and fail)
+Thread.new do
+
+    loop do
+
+        result = server.request(CLIENT_ENTITY_ID, ip:"127.0.0.1", port: client.port) do
+            request(OBJECT_ID,0,"hello")
+            request(OBJECT_ID,0,"hello")
+            request(OBJECT_ID,0,"hello")
+            request(OBJECT_ID,0,"hello")
+            request(OBJECT_ID,0,"hello")
+        end
+
+        result.each do |r|
+            puts "server got: #{r.to_human}"
+        end
+
+        sleep(2)
+
+    end
+
+end
+
 # every second, client will send the following request to the server
 loop do
 
@@ -66,7 +89,9 @@ loop do
         request(OBJECT_ID,0,"hello")
     end
 
-    pp result
+    result.each do |r|
+            puts "server got: #{r.to_human}"
+        end
 
     sleep(2)
 
